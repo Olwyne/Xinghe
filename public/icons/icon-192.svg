@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="40" fill="#0B0D2A"/>
+  <circle cx="96" cy="76" r="40" fill="none" stroke="#F3B6D0" stroke-width="3" opacity="0.8"/>
+  <circle cx="72" cy="60" r="2" fill="#F3B6D0" opacity="0.9"/>
+  <circle cx="96" cy="46" r="1.5" fill="#8FE3E0"/>
+  <circle cx="120" cy="55" r="2.5" fill="#E8C97A" opacity="0.7"/>
+  <circle cx="110" cy="90" r="1.8" fill="#B9AEEA"/>
+  <circle cx="80" cy="95" r="1.2" fill="#fff" opacity="0.5"/>
+  <text x="96" y="148" text-anchor="middle" font-family="serif" font-size="28" fill="#F3EFFB" letter-spacing="2">星河</text>
+</svg>

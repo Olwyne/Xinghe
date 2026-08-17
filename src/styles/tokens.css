@@ -1,0 +1,95 @@
+:root {
+  /* === Background === */
+  --xh-bg: #0B0D2A;
+  --xh-bg-mid: #171233;
+  --xh-bg-deep: #241a4d;
+  --xh-bg-gradient: linear-gradient(165deg, #0B0D2A 0%, #171233 45%, #241a4d 100%);
+  --xh-bg-ambient: radial-gradient(circle at 50% 40%, #241a4d, #050614);
+
+  /* === Text === */
+  --xh-text: #F3EFFB;
+  --xh-text-sub: rgba(243, 239, 251, 0.62);
+  --xh-text-faint: rgba(243, 239, 251, 0.38);
+  --xh-text-on-accent: #0B0D2A;
+
+  /* === Accent (session modes) === */
+  --xh-focus: #F3B6D0;
+  --xh-short: #8FE3E0;
+  --xh-long: #E8C97A;
+  --xh-accent-4: #B9AEEA;
+
+  /* === Surfaces === */
+  --xh-card: rgba(255, 255, 255, 0.06);
+  --xh-card-border: rgba(255, 255, 255, 0.10);
+  --xh-card-border-strong: rgba(255, 255, 255, 0.16);
+  --xh-card-hover: rgba(255, 255, 255, 0.10);
+  --xh-overlay: rgba(5, 6, 20, 0.72);
+  --xh-modal-bg: rgba(20, 18, 45, 0.95);
+  --xh-nav-bg: rgba(9, 9, 26, 0.55);
+  --xh-separator: rgba(255, 255, 255, 0.06);
+
+  /* === Typography === */
+  --xh-font-ui: 'Manrope', system-ui, sans-serif;
+  --xh-font-display: 'Instrument Serif', serif;
+  --xh-font-timer: 'Cormorant Garamond', serif;
+
+  --xh-text-xs: 0.5625rem;    /* 9px */
+  --xh-text-sm: 0.6875rem;    /* 11px */
+  --xh-text-base: 0.75rem;    /* 12px */
+  --xh-text-md: 0.8125rem;    /* 13px */
+  --xh-text-lg: 0.875rem;     /* 14px */
+  --xh-text-xl: 1.25rem;      /* 20px */
+  --xh-text-2xl: 1.5rem;      /* 24px */
+  --xh-text-3xl: 2.375rem;    /* 38px — desktop timer */
+  --xh-text-4xl: 4.5rem;      /* 72px — mobile timer */
+  --xh-text-5xl: 5.25rem;     /* 84px — ambient timer */
+
+  /* === Spacing === */
+  --xh-sp-1: 3px;
+  --xh-sp-2: 4px;
+  --xh-sp-3: 6px;
+  --xh-sp-4: 8px;
+  --xh-sp-5: 10px;
+  --xh-sp-6: 12px;
+  --xh-sp-7: 14px;
+  --xh-sp-8: 16px;
+  --xh-sp-9: 18px;
+  --xh-sp-10: 20px;
+  --xh-sp-12: 24px;
+  --xh-sp-14: 28px;
+  --xh-sp-16: 32px;
+
+  /* === Radii === */
+  --xh-r-sm: 5px;
+  --xh-r-md: 10px;
+  --xh-r-lg: 12px;
+  --xh-r-xl: 14px;
+  --xh-r-2xl: 16px;
+  --xh-r-pill: 20px;
+  --xh-r-round: 50%;
+  --xh-r-modal: 18px;
+  --xh-r-sheet: 24px;
+
+  /* === Shadows === */
+  --xh-shadow-glow-sm: 0 0 8px;
+  --xh-shadow-glow-md: 0 0 30px;
+  --xh-shadow-glow-lg: 0 0 40px;
+  --xh-shadow-mini: 0 20px 50px rgba(0, 0, 0, 0.5);
+  --xh-shadow-frame: 0 40px 100px rgba(0, 0, 0, 0.6);
+
+  /* === Transitions === */
+  --xh-ease-fast: 0.15s ease;
+  --xh-ease-base: 0.2s ease;
+  --xh-ease-slow: 0.3s ease;
+
+  /* === Layout === */
+  --xh-timer-ring-mobile: 260px;
+  --xh-timer-ring-desktop: 150px;
+  --xh-sidebar-w: 220px;
+  --xh-desktop-max-w: 1180px;
+  --xh-breakpoint-desktop: 768px;
+
+  /* === Nebula === */
+  --xh-nebula-pink: radial-gradient(circle, rgba(243, 182, 208, 0.16), transparent 70%);
+  --xh-nebula-teal: radial-gradient(circle, rgba(143, 227, 224, 0.12), transparent 70%);
+}

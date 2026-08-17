@@ -1,0 +1,32 @@
+.connectivity {
+  display: flex;
+  align-items: center;
+  gap: var(--xh-sp-3);
+  font-size: var(--xh-text-sm);
+  padding: var(--xh-sp-2) var(--xh-sp-5);
+  border-radius: var(--xh-r-pill);
+  background: var(--xh-card);
+  border: 1px solid var(--xh-card-border);
+}
+
+.connectivity__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.connectivity--offline .connectivity__dot {
+  background: #f87171;
+}
+
+.connectivity--offline .connectivity__label {
+  color: #f87171;
+}
+
+.connectivity--syncing .connectivity__dot {
+  background: var(--xh-long);
+}
+
+.connectivity--syncing .connectivity__label {
+  color: var(--xh-long);
+}

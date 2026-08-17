@@ -1,0 +1,77 @@
+.layout {
+  height: 100%;
+  position: relative;
+  background: var(--xh-bg-gradient);
+  overflow: hidden;
+}
+
+.layout__nebula {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  filter: blur(10px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.layout__nebula--pink {
+  top: -60px;
+  left: -40px;
+  background: var(--xh-nebula-pink);
+  animation: xh-breathe 9s ease-in-out infinite;
+}
+
+.layout__nebula--teal {
+  bottom: 40px;
+  right: -60px;
+  background: var(--xh-nebula-teal);
+}
+
+/* === Mobile === */
+
+.layout--mobile {
+  display: flex;
+  flex-direction: column;
+}
+
+.layout__mobile-header {
+  position: absolute;
+  top: var(--xh-sp-5);
+  right: var(--xh-sp-5);
+  z-index: 5;
+}
+
+.layout__content {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* === Desktop === */
+
+.layout--desktop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.layout__desktop-frame {
+  position: relative;
+  z-index: 1;
+  width: min(var(--xh-desktop-max-w), 94vw);
+  height: 90vh;
+  max-height: 740px;
+  border-radius: var(--xh-r-pill);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--xh-bg-gradient);
+  display: flex;
+}
+
+.layout__main {
+  flex: 1;
+  overflow: auto;
+  padding: 26px var(--xh-sp-16);
+}

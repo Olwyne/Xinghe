@@ -1,0 +1,69 @@
+{
+  "app": {
+    "name": "Xinghe"
+  },
+  "nav": {
+    "timer": "Minuteur",
+    "tasks": "Tâches",
+    "goals": "Objectifs",
+    "stats": "Stats",
+    "profile": "Profil"
+  },
+  "auth": {
+    "login": "Se connecter",
+    "register": "Créer un compte",
+    "logout": "Se déconnecter",
+    "email": "Adresse email",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "resetSent": "Un lien de réinitialisation a été envoyé à {{email}}.",
+    "noAccount": "Pas encore de compte ?",
+    "hasAccount": "Déjà un compte ?",
+    "error": {
+      "invalidEmail": "Adresse email invalide.",
+      "wrongPassword": "Mot de passe incorrect.",
+      "emailInUse": "Cette adresse est déjà utilisée.",
+      "weakPassword": "Le mot de passe doit contenir au moins 6 caractères.",
+      "passwordMismatch": "Les mots de passe ne correspondent pas.",
+      "generic": "Une erreur est survenue. Réessaie.",
+      "tooManyRequests": "Trop de tentatives. Réessaie dans quelques minutes.",
+      "userNotFound": "Aucun compte trouvé avec cette adresse.",
+      "notConfigured": "Firebase n'est pas configuré. Copie .env.example vers .env et renseigne tes clés."
+    }
+  },
+  "timer": {
+    "focus": "Focus",
+    "shortBreak": "Pause courte",
+    "longBreak": "Pause longue",
+    "pomodoroCount": "Pomodoro {{current}} sur {{total}} avant la pause longue",
+    "sessionEnded": "Session terminée",
+    "breakEnded": "Pause terminée",
+    "sessionEndMessage": "Un point de plus sur le fleuve. Belle constance.",
+    "breakEndMessage": "Prêt·e à reprendre le courant ?",
+    "startBreak": "Passer en pause",
+    "resumeFocus": "Reprendre le focus",
+    "ambient": "Ambiant",
+    "ambientBack": "Toucher l'écran pour revenir",
+    "todayGoal": "Objectif du jour",
+    "remainingToday": "{{minutes}} min restantes aujourd'hui, tous projets",
+    "goalsReached": "Objectifs du jour atteints ✓",
+    "walking": "marche"
+  },
+  "connectivity": {
+    "offline": "Hors ligne",
+    "syncing": "Synchronisation…",
+    "synced": "À jour"
+  },
+  "common": {
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "create": "Créer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "close": "Fermer",
+    "loading": "Chargement…"
+  }
+}

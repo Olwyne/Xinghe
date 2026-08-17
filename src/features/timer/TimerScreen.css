@@ -1,0 +1,51 @@
+.timer-screen {
+  padding: var(--xh-sp-14) var(--xh-sp-12) var(--xh-sp-10);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.timer-screen__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--xh-sp-9);
+}
+
+.timer-screen__logo {
+  font-family: var(--xh-font-display);
+  font-size: var(--xh-text-xl);
+  color: var(--xh-text);
+  letter-spacing: 0.5px;
+}
+
+.timer-screen__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xh-sp-10);
+}
+
+.timer-screen__mode {
+  font-size: var(--xh-text-base);
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.timer-screen__cycle {
+  font-size: var(--xh-text-base);
+  color: var(--xh-text-faint);
+}
+
+@media (min-width: 768px) {
+  .timer-screen {
+    padding: var(--xh-sp-16) var(--xh-sp-16);
+  }
+
+  .timer-screen__header {
+    display: none;
+  }
+}

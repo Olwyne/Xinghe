@@ -1,0 +1,25 @@
+.timer-ring {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-ring__svg {
+  position: absolute;
+}
+
+.timer-ring__time {
+  font-family: var(--xh-font-timer);
+  font-weight: 600;
+  font-size: var(--xh-text-4xl);
+  color: var(--xh-text);
+  letter-spacing: 1px;
+  z-index: 1;
+}
+
+@media (min-width: 768px) {
+  .timer-ring__time {
+    font-size: var(--xh-text-3xl);
+  }
+}

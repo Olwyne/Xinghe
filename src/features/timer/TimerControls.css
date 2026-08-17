@@ -1,0 +1,52 @@
+.timer-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--xh-sp-9);
+}
+
+.timer-controls__btn {
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity var(--xh-ease-fast);
+}
+
+.timer-controls__btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.timer-controls__btn--primary {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  color: var(--xh-text-on-accent);
+  font-size: 24px;
+}
+
+.timer-controls__btn--secondary {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--xh-card-border) !important;
+  background: transparent;
+  color: var(--xh-text-sub);
+  font-size: 16px;
+}
+
+@media (min-width: 768px) {
+  .timer-controls__btn--primary {
+    width: 54px;
+    height: 54px;
+    font-size: 18px;
+  }
+
+  .timer-controls__btn--secondary {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+}

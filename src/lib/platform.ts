@@ -47,3 +47,36 @@ export function vibrate(pattern: number | number[]): void {
     navigator.vibrate(pattern)
   }
 }
+
+export function playSessionEndSound(): void {
+  try {
+    const ctx = new AudioContext()
+    const g = ctx.createGain()
+    g.connect(ctx.destination)
+    g.gain.setValueAtTime(0.3, ctx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8)
+
+    const osc1 = ctx.createOscillator()
+    osc1.type = 'sine'
+    osc1.frequency.setValueAtTime(587.33, ctx.currentTime) // D5
+    osc1.connect(g)
+    osc1.start(ctx.currentTime)
+    osc1.stop(ctx.currentTime + 0.3)
+
+    const g2 = ctx.createGain()
+    g2.connect(ctx.destination)
+    g2.gain.setValueAtTime(0.3, ctx.currentTime + 0.3)
+    g2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.1)
+
+    const osc2 = ctx.createOscillator()
+    osc2.type = 'sine'
+    osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.3) // A5
+    osc2.connect(g2)
+    osc2.start(ctx.currentTime + 0.3)
+    osc2.stop(ctx.currentTime + 0.8)
+
+    osc2.onended = () => ctx.close()
+  } catch {
+    // Web Audio not available
+  }
+}

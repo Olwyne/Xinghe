@@ -1,0 +1,36 @@
+.session-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  text-align: center;
+  gap: var(--xh-sp-8);
+  padding: var(--xh-sp-14) var(--xh-sp-12);
+}
+
+.session-end__star {
+  font-size: 40px;
+}
+
+.session-end__title {
+  font-family: var(--xh-font-display);
+  font-size: 26px;
+  color: var(--xh-text);
+}
+
+.session-end__message {
+  font-size: var(--xh-text-md);
+  color: var(--xh-text-sub);
+  max-width: 260px;
+}
+
+.session-end__button {
+  margin-top: var(--xh-sp-5);
+  padding: var(--xh-sp-6) var(--xh-sp-14);
+  border-radius: 30px;
+  border: none;
+  color: var(--xh-text-on-accent);
+  font-weight: 700;
+  font-size: var(--xh-text-lg);
+}

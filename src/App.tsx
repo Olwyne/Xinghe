@@ -6,6 +6,7 @@ import type { NavTab } from '@/components/BottomNav'
 import type { DesktopTab } from '@/components/Sidebar'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
+import { TimerScreen } from '@/features/timer/TimerScreen'
 
 function PlaceholderScreen({ title }: { title: string }) {
   return (
@@ -46,7 +47,7 @@ function AppShell() {
 
     switch (tab) {
       case 'timer':
-        return <PlaceholderScreen title={t('nav.timer')} />
+        return <TimerScreen isDesktop={desktop} />
       case 'tasks':
         return <PlaceholderScreen title={t('nav.tasks')} />
       case 'matrix':

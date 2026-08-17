@@ -51,6 +51,17 @@
     "goalsReached": "Today's goals reached ✓",
     "walking": "walking"
   },
+  "tasks": {
+    "empty": "No tasks yet.",
+    "addPlaceholder": "New task…",
+    "completed": "Completed ({{count}})"
+  },
+  "projects": {
+    "all": "All",
+    "manage": "Manage projects",
+    "newPlaceholder": "New project…",
+    "create": "Create"
+  },
   "connectivity": {
     "offline": "Offline",
     "syncing": "Syncing…",

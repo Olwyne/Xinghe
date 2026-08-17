@@ -7,6 +7,7 @@ import type { DesktopTab } from '@/components/Sidebar'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
 import { TimerScreen } from '@/features/timer/TimerScreen'
+import { TasksScreen } from '@/features/tasks/TasksScreen'
 
 function PlaceholderScreen({ title }: { title: string }) {
   return (
@@ -33,61 +34,47 @@ function PlaceholderScreen({ title }: { title: string }) {
   )
 }
 
-function AppShell() {
+function SettingsScreen({ isDesktop }: { isDesktop: boolean }) {
   const { t } = useTranslation()
   const { logout } = useAuth()
+  return (
+    <div style={{ padding: '28px 24px' }}>
+      <div
+        style={{
+          fontFamily: 'var(--xh-font-display)',
+          fontSize: 'var(--xh-text-2xl)',
+          color: 'var(--xh-text)',
+          marginBottom: 18,
+        }}
+      >
+        {isDesktop ? 'Réglages' : t('nav.profile')}
+      </div>
+      <button
+        onClick={logout}
+        style={{
+          padding: '10px 20px',
+          borderRadius: 'var(--xh-r-lg)',
+          border: '1px solid var(--xh-card-border)',
+          background: 'transparent',
+          color: 'var(--xh-text-sub)',
+          fontWeight: 600,
+          cursor: 'pointer',
+        }}
+      >
+        {t('auth.logout')}
+      </button>
+    </div>
+  )
+}
+
+function AppShell() {
+  const { t } = useTranslation()
   const desktop = useIsDesktop()
   const [mobileTab, setMobileTab] = useState<NavTab>('timer')
   const [desktopTab, setDesktopTab] = useState<DesktopTab>('timer')
 
   const accentColor = 'var(--xh-focus)'
-
-  function renderScreen() {
-    const tab = desktop ? desktopTab : mobileTab
-
-    switch (tab) {
-      case 'timer':
-        return <TimerScreen isDesktop={desktop} />
-      case 'tasks':
-        return <PlaceholderScreen title={t('nav.tasks')} />
-      case 'matrix':
-        return <PlaceholderScreen title="Matrice" />
-      case 'goals':
-        return <PlaceholderScreen title={t('nav.goals')} />
-      case 'stats':
-        return <PlaceholderScreen title={t('nav.stats')} />
-      case 'profile':
-      case 'settings':
-        return (
-          <div style={{ padding: '28px 24px' }}>
-            <div
-              style={{
-                fontFamily: 'var(--xh-font-display)',
-                fontSize: 'var(--xh-text-2xl)',
-                color: 'var(--xh-text)',
-                marginBottom: 18,
-              }}
-            >
-              {desktop ? 'Réglages' : t('nav.profile')}
-            </div>
-            <button
-              onClick={logout}
-              style={{
-                padding: '10px 20px',
-                borderRadius: 'var(--xh-r-lg)',
-                border: '1px solid var(--xh-card-border)',
-                background: 'transparent',
-                color: 'var(--xh-text-sub)',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              {t('auth.logout')}
-            </button>
-          </div>
-        )
-    }
-  }
+  const tab = desktop ? desktopTab : mobileTab
 
   return (
     <Layout
@@ -98,7 +85,12 @@ function AppShell() {
       accentColor={accentColor}
       isDesktop={desktop}
     >
-      {renderScreen()}
+      {tab === 'timer' && <TimerScreen isDesktop={desktop} />}
+      {tab === 'tasks' && <TasksScreen />}
+      {tab === 'matrix' && <PlaceholderScreen title="Matrice" />}
+      {tab === 'goals' && <PlaceholderScreen title={t('nav.goals')} />}
+      {tab === 'stats' && <PlaceholderScreen title={t('nav.stats')} />}
+      {(tab === 'profile' || tab === 'settings') && <SettingsScreen isDesktop={desktop} />}
     </Layout>
   )
 }

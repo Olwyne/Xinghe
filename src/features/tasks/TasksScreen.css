@@ -1,0 +1,26 @@
+.tasks-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--xh-sp-10) var(--xh-sp-8);
+  gap: var(--xh-sp-6);
+}
+
+.tasks-screen__title {
+  font-family: var(--xh-font-display);
+  font-size: var(--xh-text-2xl);
+  color: var(--xh-text);
+  margin: 0;
+}
+
+.tasks-screen__list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+@media (min-width: 768px) {
+  .tasks-screen {
+    padding: var(--xh-sp-12) var(--xh-sp-12);
+  }
+}

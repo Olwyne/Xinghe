@@ -1,0 +1,47 @@
+.add-task {
+  display: flex;
+  gap: var(--xh-sp-4);
+  padding: var(--xh-sp-4) 0;
+}
+
+.add-task__input {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--xh-card-border);
+  border-radius: var(--xh-r-md);
+  padding: var(--xh-sp-5) var(--xh-sp-6);
+  color: var(--xh-text);
+  font-size: var(--xh-text-base);
+  font-family: var(--xh-font-ui);
+  outline: none;
+  transition: border-color var(--xh-transition);
+}
+
+.add-task__input::placeholder {
+  color: var(--xh-text-faint);
+}
+
+.add-task__input:focus {
+  border-color: var(--add-accent, var(--xh-focus));
+}
+
+.add-task__btn {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: var(--xh-r-md);
+  color: var(--xh-bg);
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity var(--xh-transition);
+}
+
+.add-task__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

@@ -1,0 +1,22 @@
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xh-sp-1);
+}
+
+.task-list__empty {
+  text-align: center;
+  color: var(--xh-text-faint);
+  font-size: var(--xh-text-md);
+  padding: var(--xh-sp-16) var(--xh-sp-8);
+}
+
+.task-list__separator {
+  font-size: var(--xh-text-sm);
+  color: var(--xh-text-faint);
+  padding: var(--xh-sp-5) var(--xh-sp-4);
+  margin-top: var(--xh-sp-4);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-weight: 600;
+}

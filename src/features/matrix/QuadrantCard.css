@@ -1,0 +1,61 @@
+.qcard {
+  background: var(--xh-card);
+  border: 1px solid var(--xh-card-border);
+  border-radius: var(--xh-r-xl);
+  border-top: 3px solid var(--qcard-color, var(--xh-focus));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 120px;
+}
+
+.qcard__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--xh-sp-6) var(--xh-sp-6) var(--xh-sp-4);
+}
+
+.qcard__labels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.qcard__label {
+  font-size: var(--xh-text-sm);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--qcard-color, var(--xh-focus));
+}
+
+.qcard__sublabel {
+  font-size: var(--xh-text-xs);
+  color: var(--xh-text-faint);
+}
+
+.qcard__count {
+  font-size: var(--xh-text-xs);
+  font-weight: 700;
+  background: var(--qcard-color, var(--xh-focus));
+  color: var(--xh-bg);
+  border-radius: 10px;
+  padding: 1px 7px;
+  line-height: 18px;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.qcard__tasks {
+  flex: 1;
+  padding: 0 var(--xh-sp-3) var(--xh-sp-4);
+  overflow-y: auto;
+}
+
+.qcard__empty {
+  color: var(--xh-text-faint);
+  font-size: var(--xh-text-sm);
+  padding: var(--xh-sp-4) var(--xh-sp-4);
+  opacity: 0.5;
+}

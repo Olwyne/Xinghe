@@ -1,0 +1,31 @@
+.matrix-screen {
+  padding: var(--xh-sp-8);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.matrix-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: var(--xh-sp-6);
+  overflow: hidden;
+}
+
+@media (max-width: 767px) {
+  .matrix-screen {
+    padding: var(--xh-sp-4) var(--xh-sp-4);
+    overflow-y: auto;
+  }
+
+  .matrix-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    overflow: visible;
+    min-height: 0;
+    flex: none;
+  }
+}

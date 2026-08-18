@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
 import { TimerScreen } from '@/features/timer/TimerScreen'
 import { TasksScreen } from '@/features/tasks/TasksScreen'
+import { MatrixScreen } from '@/features/matrix/MatrixScreen'
 
 function PlaceholderScreen({ title }: { title: string }) {
   return (
@@ -87,7 +88,7 @@ function AppShell() {
     >
       {tab === 'timer' && <TimerScreen isDesktop={desktop} />}
       {tab === 'tasks' && <TasksScreen />}
-      {tab === 'matrix' && <PlaceholderScreen title="Matrice" />}
+      {tab === 'matrix' && <MatrixScreen />}
       {tab === 'goals' && <PlaceholderScreen title={t('nav.goals')} />}
       {tab === 'stats' && <PlaceholderScreen title={t('nav.stats')} />}
       {(tab === 'profile' || tab === 'settings') && <SettingsScreen isDesktop={desktop} />}

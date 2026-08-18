@@ -54,7 +54,19 @@
   "tasks": {
     "empty": "No tasks yet.",
     "addPlaceholder": "New task…",
-    "completed": "Completed ({{count}})"
+    "completed": "Completed ({{count}})",
+    "viewList": "List",
+    "viewMatrix": "Matrix"
+  },
+  "matrix": {
+    "q1Label": "Do",
+    "q1Sub": "Urgent + Important",
+    "q2Label": "Plan",
+    "q2Sub": "Important, not urgent",
+    "q3Label": "Delegate",
+    "q3Sub": "Urgent, not important",
+    "q4Label": "Eliminate",
+    "q4Sub": "Neither urgent nor important"
   },
   "projects": {
     "all": "All",

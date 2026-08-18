@@ -6,11 +6,53 @@
   gap: var(--xh-sp-6);
 }
 
+.tasks-screen__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xh-sp-4);
+  flex-wrap: wrap;
+}
+
 .tasks-screen__title {
   font-family: var(--xh-font-display);
   font-size: var(--xh-text-2xl);
   color: var(--xh-text);
   margin: 0;
+}
+
+.tasks-screen__toggle {
+  display: flex;
+  gap: var(--xh-sp-2);
+  background: var(--xh-card);
+  border: 1px solid var(--xh-card-border);
+  border-radius: var(--xh-r-lg);
+  padding: 3px;
+}
+
+.tasks-toggle__btn {
+  border: none;
+  background: transparent;
+  color: var(--xh-text-faint);
+  font-size: var(--xh-text-sm);
+  font-family: var(--xh-font-ui);
+  font-weight: 500;
+  padding: var(--xh-sp-3) var(--xh-sp-5);
+  border-radius: var(--xh-r-md);
+  cursor: pointer;
+  transition: background var(--xh-transition), color var(--xh-transition);
+  white-space: nowrap;
+}
+
+.tasks-toggle__btn--active {
+  background: var(--xh-card-border-strong);
+  color: var(--xh-text);
+}
+
+.tasks-screen__matrix {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .tasks-screen__list {

@@ -1,0 +1,121 @@
+.stats-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--xh-sp-10) var(--xh-sp-8);
+  gap: var(--xh-sp-6);
+  overflow-y: auto;
+}
+
+.stats-screen__title {
+  font-family: var(--xh-font-display);
+  font-size: var(--xh-text-2xl);
+  color: var(--xh-text);
+  margin: 0;
+}
+
+.stats-card {
+  background: var(--xh-card);
+  border: 1px solid var(--xh-card-border);
+  border-radius: var(--xh-r-lg);
+  padding: var(--xh-sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--xh-sp-4);
+}
+
+.stats-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.stats-card__label {
+  font-size: var(--xh-text-sm);
+  color: var(--xh-text-faint);
+  font-family: var(--xh-font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.stats-card__value {
+  font-family: var(--xh-font-display);
+  font-size: var(--xh-text-xl);
+  color: var(--xh-text);
+}
+
+.stats-card__track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--xh-card-border);
+  overflow: hidden;
+}
+
+.stats-card__fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.stats-card__sub {
+  font-size: var(--xh-text-xs);
+  color: var(--xh-text-faint);
+}
+
+.stats-card__empty {
+  font-size: var(--xh-text-sm);
+  color: var(--xh-text-faint);
+  margin: 0;
+}
+
+.stats-habits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xh-sp-3);
+}
+
+.stats-habit {
+  display: flex;
+  align-items: center;
+  gap: var(--xh-sp-3);
+  font-size: var(--xh-text-md);
+}
+
+.stats-habit__icon {
+  font-size: 1.1rem;
+}
+
+.stats-habit__name {
+  flex: 1;
+  color: var(--xh-text-sub);
+  font-family: var(--xh-font-ui);
+}
+
+.stats-habit--done .stats-habit__name {
+  color: var(--xh-text);
+}
+
+.stats-habit__streak {
+  font-size: var(--xh-text-sm);
+  color: var(--xh-text-faint);
+}
+
+.stats-habit__check {
+  font-size: var(--xh-text-sm);
+  color: var(--xh-text-faint);
+  width: 20px;
+  text-align: center;
+}
+
+.stats-habit--done .stats-habit__check {
+  color: var(--xh-short);
+}
+
+@media (min-width: 768px) {
+  .stats-screen {
+    padding: var(--xh-sp-12) var(--xh-sp-12);
+  }
+}

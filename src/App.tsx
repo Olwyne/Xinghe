@@ -10,31 +10,7 @@ import { TimerScreen } from '@/features/timer/TimerScreen'
 import { TasksScreen } from '@/features/tasks/TasksScreen'
 import { MatrixScreen } from '@/features/matrix/MatrixScreen'
 import { HabitsScreen } from '@/features/habits/HabitsScreen'
-
-function PlaceholderScreen({ title }: { title: string }) {
-  return (
-    <div style={{ padding: '28px 24px' }}>
-      <div
-        style={{
-          fontFamily: 'var(--xh-font-display)',
-          fontSize: 'var(--xh-text-2xl)',
-          color: 'var(--xh-text)',
-          marginBottom: 18,
-        }}
-      >
-        {title}
-      </div>
-      <div
-        style={{
-          color: 'var(--xh-text-faint)',
-          fontSize: 'var(--xh-text-md)',
-        }}
-      >
-        À venir au prochain jalon.
-      </div>
-    </div>
-  )
-}
+import { StatsScreen } from '@/features/stats/StatsScreen'
 
 function SettingsScreen({ isDesktop }: { isDesktop: boolean }) {
   const { t } = useTranslation()
@@ -70,7 +46,6 @@ function SettingsScreen({ isDesktop }: { isDesktop: boolean }) {
 }
 
 function AppShell() {
-  const { t } = useTranslation()
   const desktop = useIsDesktop()
   const [mobileTab, setMobileTab] = useState<NavTab>('timer')
   const [desktopTab, setDesktopTab] = useState<DesktopTab>('timer')
@@ -91,7 +66,7 @@ function AppShell() {
       {tab === 'tasks' && <TasksScreen />}
       {tab === 'matrix' && <MatrixScreen />}
       {tab === 'goals' && <HabitsScreen />}
-      {tab === 'stats' && <PlaceholderScreen title={t('nav.stats')} />}
+      {tab === 'stats' && <StatsScreen />}
       {(tab === 'profile' || tab === 'settings') && <SettingsScreen isDesktop={desktop} />}
     </Layout>
   )

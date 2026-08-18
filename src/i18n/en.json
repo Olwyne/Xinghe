@@ -68,6 +68,12 @@
     "q4Label": "Eliminate",
     "q4Sub": "Neither urgent nor important"
   },
+  "stats": {
+    "weekFocus": "Focus this week",
+    "weekTarget": "Target: {{target}} (Mon–Fri)",
+    "todayHabits": "Today's habits",
+    "noHabits": "No habits created yet."
+  },
   "ritual": {
     "skip": "Skip ritual"
   },

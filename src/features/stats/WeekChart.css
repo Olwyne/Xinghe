@@ -1,0 +1,40 @@
+.week-chart {
+  display: flex;
+  gap: var(--xh-sp-3);
+  align-items: flex-end;
+  height: 80px;
+}
+
+.week-chart__col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xh-sp-2);
+  height: 100%;
+}
+
+.week-chart__bar-wrap {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.week-chart__bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.4s ease;
+  min-height: 0;
+}
+
+.week-chart__label {
+  font-size: var(--xh-text-xs);
+  color: var(--xh-text-faint);
+  font-family: var(--xh-font-ui);
+}
+
+.week-chart__label--today {
+  color: var(--xh-text-sub);
+  font-weight: 600;
+}

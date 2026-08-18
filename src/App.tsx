@@ -9,6 +9,7 @@ import { useIsDesktop } from '@/hooks/useMediaQuery'
 import { TimerScreen } from '@/features/timer/TimerScreen'
 import { TasksScreen } from '@/features/tasks/TasksScreen'
 import { MatrixScreen } from '@/features/matrix/MatrixScreen'
+import { HabitsScreen } from '@/features/habits/HabitsScreen'
 
 function PlaceholderScreen({ title }: { title: string }) {
   return (
@@ -89,7 +90,7 @@ function AppShell() {
       {tab === 'timer' && <TimerScreen isDesktop={desktop} />}
       {tab === 'tasks' && <TasksScreen />}
       {tab === 'matrix' && <MatrixScreen />}
-      {tab === 'goals' && <PlaceholderScreen title={t('nav.goals')} />}
+      {tab === 'goals' && <HabitsScreen />}
       {tab === 'stats' && <PlaceholderScreen title={t('nav.stats')} />}
       {(tab === 'profile' || tab === 'settings') && <SettingsScreen isDesktop={desktop} />}
     </Layout>

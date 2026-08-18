@@ -68,6 +68,10 @@
     "q4Label": "Éliminer",
     "q4Sub": "Ni urgent ni important"
   },
+  "habits": {
+    "empty": "Aucune habitude. Clique sur + pour commencer.",
+    "namePlaceholder": "Nom de l'habitude…"
+  },
   "projects": {
     "all": "Tout",
     "manage": "Gérer les projets",

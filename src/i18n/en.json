@@ -68,6 +68,10 @@
     "q4Label": "Eliminate",
     "q4Sub": "Neither urgent nor important"
   },
+  "habits": {
+    "empty": "No habits yet. Click + to start.",
+    "namePlaceholder": "Habit name…"
+  },
   "projects": {
     "all": "All",
     "manage": "Manage projects",

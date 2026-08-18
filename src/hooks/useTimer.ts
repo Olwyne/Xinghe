@@ -11,16 +11,17 @@ import {
   isExpired,
   remainingSeconds,
   computeProgress,
+  computeElapsedMs,
   durationMs,
 } from '@/features/timer/timerEngine'
 import {
   acquireWakeLock,
   releaseWakeLock,
   reacquireWakeLockIfNeeded,
-
   sendNotification,
   playSessionEndSound,
 } from '@/lib/platform'
+
 interface UseTimerReturn {
   state: TimerState
   remaining: number
@@ -33,7 +34,12 @@ interface UseTimerReturn {
   setType: (type: SessionType) => void
 }
 
-export function useTimer(settings: TimerSettings): UseTimerReturn {
+export function useTimer(
+  settings: TimerSettings,
+  onFocusComplete?: (durationMs: number) => void,
+): UseTimerReturn {
+  const onFocusCompleteRef = useRef(onFocusComplete)
+  onFocusCompleteRef.current = onFocusComplete
   const [state, setState] = useState<TimerState>(
     () => createIdleState('focus', settings, 1),
   )
@@ -59,7 +65,9 @@ export function useTimer(settings: TimerSettings): UseTimerReturn {
     if (currentState.status === 'running' && isExpired(currentState, currentNow)) {
       clearTick()
       setState(engineEnd(currentState))
-
+      if (currentState.type === 'focus') {
+        onFocusCompleteRef.current?.(currentState.duration)
+      }
       playSessionEndSound()
 
       if (document.visibilityState === 'hidden' || !document.hasFocus()) {
@@ -129,7 +137,13 @@ export function useTimer(settings: TimerSettings): UseTimerReturn {
 
   const skip = useCallback(() => {
     clearTick()
-    setState((prev) => engineEnd(prev))
+    setState((prev) => {
+      if (prev.type === 'focus' && (prev.status === 'running' || prev.status === 'paused')) {
+        const elapsed = computeElapsedMs(prev, Date.now())
+        if (elapsed >= 60_000) onFocusCompleteRef.current?.(elapsed)
+      }
+      return engineEnd(prev)
+    })
     playSessionEndSound()
     releaseWakeLock()
   }, [clearTick])

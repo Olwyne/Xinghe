@@ -1,0 +1,70 @@
+import { useState, useEffect, useCallback } from 'react'
+import { getStore, setStore } from '@/lib/localStore'
+import { db, isFirebaseConfigured } from '@/config/firebase'
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+} from 'firebase/firestore'
+import type { Session } from '@/features/goals/types'
+
+const STORE_KEY = 'xinghe-sessions'
+
+function todayStart(): number {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+
+function loadLocalSessions(): Session[] {
+  const all = getStore<Session[]>(STORE_KEY, [])
+  const start = todayStart()
+  return all.filter((s) => s.startedAt >= start)
+}
+
+export function useTodaySessions(uid: string | null) {
+  const [sessions, setSessions] = useState<Session[]>(loadLocalSessions)
+
+  useEffect(() => {
+    if (!isFirebaseConfigured || !uid || !db) return
+    const col = collection(db, 'users', uid, 'sessions')
+    const q = query(
+      col,
+      where('startedAt', '>=', todayStart()),
+      where('type', '==', 'focus'),
+      orderBy('startedAt', 'desc'),
+    )
+    const unsub = onSnapshot(q, (snap) => {
+      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Session))
+      setSessions(docs)
+    })
+    return unsub
+  }, [uid])
+
+  const recordSession = useCallback(async (projectId: string, durationMs: number) => {
+    const session: Omit<Session, 'id'> = {
+      projectId,
+      startedAt: Date.now(),
+      durationMs,
+      type: 'focus',
+    }
+
+    if (isFirebaseConfigured && uid && db) {
+      await addDoc(collection(db, 'users', uid, 'sessions'), session)
+    } else {
+      const all = getStore<Session[]>(STORE_KEY, [])
+      const newSession: Session = { ...session, id: crypto.randomUUID() }
+      setStore(STORE_KEY, [...all, newSession])
+      setSessions((prev) => [newSession, ...prev])
+    }
+  }, [uid])
+
+  const totalFocusMinutes = Math.floor(
+    sessions.reduce((sum, s) => sum + s.durationMs, 0) / 60_000,
+  )
+
+  return { sessions, recordSession, totalFocusMinutes }
+}

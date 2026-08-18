@@ -1,0 +1,28 @@
+.goal-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xh-sp-2);
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.goal-bar__track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--xh-card-border);
+  overflow: hidden;
+}
+
+.goal-bar__fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.goal-bar__label {
+  font-size: var(--xh-text-xs);
+  color: var(--xh-text-faint);
+  text-align: center;
+  letter-spacing: 0.04em;
+}

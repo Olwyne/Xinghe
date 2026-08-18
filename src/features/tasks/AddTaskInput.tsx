@@ -31,6 +31,7 @@ export function AddTaskInput({ onAdd, accentColor }: AddTaskInputProps) {
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
         placeholder={t('tasks.addPlaceholder')}
         style={{ '--add-accent': accentColor } as React.CSSProperties}
       />

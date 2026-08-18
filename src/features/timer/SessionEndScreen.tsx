@@ -6,11 +6,13 @@ interface SessionEndScreenProps {
   type: SessionType
   accentColor: string
   onContinue: () => void
+  onStartBreak?: () => void
 }
 
-export function SessionEndScreen({ type, accentColor, onContinue }: SessionEndScreenProps) {
+export function SessionEndScreen({ type, accentColor, onContinue, onStartBreak }: SessionEndScreenProps) {
   const { t } = useTranslation()
   const isFocus = type === 'focus'
+  const handleClick = isFocus && onStartBreak ? onStartBreak : onContinue
 
   return (
     <div className="session-end">
@@ -24,7 +26,7 @@ export function SessionEndScreen({ type, accentColor, onContinue }: SessionEndSc
       <button
         className="session-end__button"
         style={{ background: accentColor }}
-        onClick={onContinue}
+        onClick={handleClick}
       >
         {isFocus ? t('timer.startBreak') : t('timer.resumeFocus')}
       </button>

@@ -68,6 +68,9 @@
     "q4Label": "Eliminate",
     "q4Sub": "Neither urgent nor important"
   },
+  "ritual": {
+    "skip": "Skip ritual"
+  },
   "habits": {
     "empty": "No habits yet. Click + to start.",
     "namePlaceholder": "Habit name…"

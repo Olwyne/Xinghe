@@ -68,6 +68,9 @@
     "q4Label": "Éliminer",
     "q4Sub": "Ni urgent ni important"
   },
+  "ritual": {
+    "skip": "Passer le rituel"
+  },
   "habits": {
     "empty": "Aucune habitude. Clique sur + pour commencer.",
     "namePlaceholder": "Nom de l'habitude…"

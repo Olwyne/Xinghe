@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useTimer } from '@/hooks/useTimer'
@@ -9,7 +9,9 @@ import { accentColor } from './timerEngine'
 import { TimerRing } from './TimerRing'
 import { TimerControls } from './TimerControls'
 import { SessionEndScreen } from './SessionEndScreen'
+import { BreakRitualScreen } from './BreakRitualScreen'
 import { GoalBar } from './GoalBar'
+import { pickRitual } from './breakRituals'
 import './TimerScreen.css'
 
 interface TimerScreenProps {
@@ -32,6 +34,28 @@ export function TimerScreen({ isDesktop }: TimerScreenProps) {
   const { state, remaining, progress, start, pause, stop, skip, continueToNext } =
     useTimer(settings, onFocusComplete)
 
+  const [showRitual, setShowRitual] = useState(false)
+  const ritualRef = useRef(pickRitual('short'))
+
+  const handleStartBreak = useCallback(() => {
+    const breakType = state.type === 'focus'
+      ? (state.cycle % settings.cyclesBeforeLong === 0 ? 'long' : 'short')
+      : 'short'
+    ritualRef.current = pickRitual(breakType as 'short' | 'long')
+    continueToNext()
+    setTimeout(() => start(), 0)
+    setShowRitual(true)
+  }, [continueToNext, start, state.cycle, state.type, settings.cyclesBeforeLong])
+
+  const handleSkipRitual = useCallback(() => {
+    setShowRitual(false)
+  }, [])
+
+  const handleContinueFromBreak = useCallback(() => {
+    setShowRitual(false)
+    continueToNext()
+  }, [continueToNext])
+
   const color = accentColor(state.type)
   const modeLabel =
     state.type === 'focus'
@@ -47,7 +71,21 @@ export function TimerScreen({ isDesktop }: TimerScreenProps) {
       <SessionEndScreen
         type={state.type}
         accentColor={color}
-        onContinue={continueToNext}
+        onContinue={handleContinueFromBreak}
+        onStartBreak={state.type === 'focus' ? handleStartBreak : undefined}
+      />
+    )
+  }
+
+  if (showRitual && state.type !== 'focus') {
+    return (
+      <BreakRitualScreen
+        type={state.type}
+        accentColor={color}
+        ritual={ritualRef.current}
+        remaining={remaining}
+        progress={progress}
+        onSkip={handleSkipRitual}
       />
     )
   }

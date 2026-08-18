@@ -20,6 +20,15 @@
   transition: width 0.6s ease;
 }
 
+.goal-bar__fill--reached {
+  animation: xh-goal-pulse 2s ease-in-out infinite;
+}
+
+@keyframes xh-goal-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 .goal-bar__label {
   font-size: var(--xh-text-xs);
   color: var(--xh-text-faint);

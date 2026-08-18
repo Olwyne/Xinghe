@@ -32,6 +32,12 @@
 .habit-item--done .habit-item__check {
   border-color: var(--xh-short);
   background: var(--xh-short);
+  animation: xh-check-bounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes xh-check-bounce {
+  0% { transform: scale(0.7); }
+  100% { transform: scale(1); }
 }
 
 .habit-item__icon {

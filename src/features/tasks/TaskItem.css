@@ -4,7 +4,13 @@
   gap: var(--xh-sp-5);
   padding: var(--xh-sp-5) var(--xh-sp-4);
   border-radius: var(--xh-r-md);
-  transition: background var(--xh-transition);
+  transition: background var(--xh-transition), opacity 0.2s ease, transform 0.2s ease;
+}
+
+.task-item--removing {
+  opacity: 0;
+  transform: translateX(12px);
+  pointer-events: none;
 }
 
 .task-item:hover {

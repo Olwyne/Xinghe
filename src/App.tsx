@@ -62,12 +62,14 @@ function AppShell() {
       accentColor={accentColor}
       isDesktop={desktop}
     >
-      {tab === 'timer' && <TimerScreen isDesktop={desktop} />}
-      {tab === 'tasks' && <TasksScreen />}
-      {tab === 'matrix' && <MatrixScreen />}
-      {tab === 'goals' && <HabitsScreen />}
-      {tab === 'stats' && <StatsScreen />}
-      {(tab === 'profile' || tab === 'settings') && <SettingsScreen isDesktop={desktop} />}
+      <div key={tab} style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'xh-fade-in 0.22s ease both' }}>
+        {tab === 'timer' && <TimerScreen isDesktop={desktop} />}
+        {tab === 'tasks' && <TasksScreen />}
+        {tab === 'matrix' && <MatrixScreen />}
+        {tab === 'goals' && <HabitsScreen />}
+        {tab === 'stats' && <StatsScreen />}
+        {(tab === 'profile' || tab === 'settings') && <SettingsScreen isDesktop={desktop} />}
+      </div>
     </Layout>
   )
 }

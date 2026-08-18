@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Task } from './types'
 import './TaskItem.css'
 
@@ -9,8 +10,15 @@ interface TaskItemProps {
 }
 
 export function TaskItem({ task, projectColor, onToggle, onDelete }: TaskItemProps) {
+  const [removing, setRemoving] = useState(false)
+
+  function handleDelete() {
+    setRemoving(true)
+    setTimeout(() => onDelete(task.id), 200)
+  }
+
   return (
-    <div className={`task-item ${task.completed ? 'task-item--done' : ''}`}>
+    <div className={`task-item ${task.completed ? 'task-item--done' : ''} ${removing ? 'task-item--removing' : ''}`}>
       <button
         className="task-item__check"
         onClick={() => onToggle(task.id)}
@@ -26,7 +34,7 @@ export function TaskItem({ task, projectColor, onToggle, onDelete }: TaskItemPro
       <span className="task-item__title">{task.title}</span>
       <button
         className="task-item__delete"
-        onClick={() => onDelete(task.id)}
+        onClick={handleDelete}
         aria-label="Supprimer"
       >
         ×

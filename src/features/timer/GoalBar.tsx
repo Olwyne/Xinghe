@@ -17,7 +17,7 @@ export function GoalBar({ totalMinutes, targetMinutes, accentColor }: GoalBarPro
     <div className="goal-bar">
       <div className="goal-bar__track">
         <div
-          className="goal-bar__fill"
+          className={`goal-bar__fill ${reached ? 'goal-bar__fill--reached' : ''}`}
           style={{ width: `${progress * 100}%`, background: accentColor }}
         />
       </div>

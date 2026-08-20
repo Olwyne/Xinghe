@@ -23,8 +23,20 @@ export function bucketSessionsByDay(
   rangeStart: number,
   dayStartHour: number,
 ): DayStat[] {
+  // Calendar arithmetic, like periodRange: recover the local calendar date of
+  // the range start, then add whole days with new Date(y, m, d + i) instead
+  // of a fixed 86_400_000ms — a fixed offset drifts by an hour across a DST
+  // transition and can, in principle, land on the wrong side of the day
+  // boundary. (See useWeekSessions.test.ts for the discrimination check this
+  // was verified against.)
+  const offsetMs = dayStartHour * 3_600_000
+  const base = new Date(rangeStart - offsetMs)
+  const y = base.getFullYear()
+  const m = base.getMonth()
+  const d = base.getDate()
+
   return Array.from({ length: 7 }, (_, i) => {
-    const ts = rangeStart + i * 86_400_000
+    const ts = new Date(y, m, d + i).getTime() + offsetMs
     const date = getDayBoundary(ts, dayStartHour)
     const minutes = Math.floor(
       sessions

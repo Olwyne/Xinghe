@@ -137,5 +137,18 @@
     "close": "Fermer",
     "loading": "Chargement…",
     "clear": "Effacer"
+  },
+  "goals": {
+    "timeTargets": "Temps par projet",
+    "setTarget": "Objectif de temps",
+    "noTarget": "Aucune cible",
+    "targetHours": "h",
+    "targetMinutes": "min",
+    "period": { "day": "Jour", "week": "Semaine", "month": "Mois" },
+    "thisDay": "aujourd'hui",
+    "thisWeek": "cette semaine",
+    "thisMonth": "ce mois-ci",
+    "overAllocated": "Tes objectifs cumulent {{total}} par jour, au-delà de ton objectif global de {{global}}.",
+    "empty": "Aucun projet n'a encore d'objectif de temps. Ajoutes-en un depuis la gestion des projets."
   }
 }

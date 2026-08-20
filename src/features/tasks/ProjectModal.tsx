@@ -1,13 +1,22 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Project } from './types'
+import type { Project, TargetPeriod } from './types'
 import { PROJECT_COLORS } from './constants'
 import './ProjectModal.css'
+
+const MAX_MINUTES: Record<TargetPeriod, number> = { day: 1440, week: 10080, month: 44640 }
+
+function isValidTarget(period: TargetPeriod, minutes: number): boolean {
+  return Number.isInteger(minutes) && minutes >= 1 && minutes <= MAX_MINUTES[period]
+}
 
 interface ProjectModalProps {
   projects: Project[]
   onAdd: (name: string, color: string, icon: string) => void
-  onUpdate: (id: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon'>>) => void
+  onUpdate: (
+    id: string,
+    updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'timeTarget'>>,
+  ) => void
   onDelete: (id: string) => void
   onClose: () => void
 }
@@ -25,11 +34,21 @@ function ProjectRow({
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(project.name)
   const [color, setColor] = useState(project.color)
+  const [period, setPeriod] = useState<TargetPeriod>(project.timeTarget?.period ?? 'week')
+  const [hours, setHours] = useState(String(Math.floor((project.timeTarget?.targetMinutes ?? 0) / 60)))
+  const [mins, setMins] = useState(String((project.timeTarget?.targetMinutes ?? 0) % 60))
+
+  const totalMinutes = (parseInt(hours, 10) || 0) * 60 + (parseInt(mins, 10) || 0)
+  const targetValid = totalMinutes === 0 || isValidTarget(period, totalMinutes)
 
   function save() {
     const trimmed = name.trim()
-    if (!trimmed) return
-    onUpdate(project.id, { name: trimmed, color })
+    if (!trimmed || !targetValid) return
+    onUpdate(project.id, {
+      name: trimmed,
+      color,
+      timeTarget: totalMinutes > 0 ? { period, targetMinutes: totalMinutes } : null,
+    })
     setEditing(false)
   }
 
@@ -54,8 +73,52 @@ function ProjectRow({
             />
           ))}
         </div>
+        <div className="pm-row__target">
+          <span className="pm-row__target-label">{t('goals.setTarget')}</span>
+          <div className="pm-row__target-inputs">
+            <input
+              className="pm-row__target-num"
+              type="number"
+              min="0"
+              max="999"
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              aria-label={t('goals.targetHours')}
+            />
+            <span>{t('goals.targetHours')}</span>
+            <input
+              className="pm-row__target-num"
+              type="number"
+              min="0"
+              max="59"
+              value={mins}
+              onChange={(e) => setMins(e.target.value)}
+              aria-label={t('goals.targetMinutes')}
+            />
+            <span>{t('goals.targetMinutes')}</span>
+          </div>
+          <div className="pm-row__periods">
+            {(['day', 'week', 'month'] as TargetPeriod[]).map((p) => (
+              <button
+                key={p}
+                className={`pm-row__period ${p === period ? 'pm-row__period--active' : ''}`}
+                onClick={() => setPeriod(p)}
+              >
+                {t(`goals.period.${p}`)}
+              </button>
+            ))}
+          </div>
+          <button
+            className="pm-row__target-clear"
+            onClick={() => { setHours('0'); setMins('0') }}
+          >
+            {t('goals.noTarget')}
+          </button>
+        </div>
         <div className="pm-row__actions">
-          <button className="pm-row__save" onClick={save}>{t('common.save')}</button>
+          <button className="pm-row__save" onClick={save} disabled={!targetValid}>
+            {t('common.save')}
+          </button>
           <button className="pm-row__cancel" onClick={() => setEditing(false)}>{t('common.cancel')}</button>
         </div>
       </div>

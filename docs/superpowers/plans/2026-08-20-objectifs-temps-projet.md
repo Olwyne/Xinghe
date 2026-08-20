@@ -918,6 +918,15 @@ export function useProjectProgress(uid: string | null): {
   )
 
   useEffect(() => {
+    // Tant que useProjects n'a pas résolu, on ne sait pas encore si un
+    // projet a une cible : rangeStart === null serait indiscernable du cas
+    // « aucune cible ». On ne touche pas sessionsLoading dans ce cas, pour
+    // ne pas afficher un « 0 / 6 h » transitoire avant que les projets
+    // n'arrivent.
+    if (projectsLoading) {
+      return
+    }
+
     if (rangeStart === null) {
       setSessions([])
       setSessionsLoading(false)
@@ -946,7 +955,7 @@ export function useProjectProgress(uid: string | null): {
       () => setSessionsLoading(false),
     )
     return unsub
-  }, [uid, rangeStart])
+  }, [uid, rangeStart, projectsLoading])
 
   const byProject = useMemo(
     () => aggregateByProject(projects, sessions, dayStart, Date.now()),

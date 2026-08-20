@@ -44,24 +44,28 @@ export function useTodaySessions(uid: string | null) {
     return unsub
   }, [uid])
 
-  const recordSession = useCallback(async (projectId: string, durationMs: number, taskId?: string) => {
-    const session: Omit<Session, 'id'> = {
-      projectId,
-      taskId: taskId ?? null,
-      startedAt: Date.now(),
-      durationMs,
-      type: 'focus',
-    }
+  const recordSession = useCallback(
+    async (projectId: string, durationMs: number, startedAt: number, taskId?: string) => {
+      const session: Omit<Session, 'id'> = {
+        projectId,
+        taskId: taskId ?? null,
+        startedAt,
+        durationMs,
+        endedAt: Date.now(),
+        type: 'focus',
+      }
 
-    if (isFirebaseConfigured && uid && db) {
-      await addDoc(collection(db, 'users', uid, 'sessions'), session)
-    } else {
-      const all = getStore<Session[]>(STORE_KEY, [])
-      const newSession: Session = { ...session, id: crypto.randomUUID() }
-      setStore(STORE_KEY, [...all, newSession])
-      setSessions((prev) => [newSession, ...prev])
-    }
-  }, [uid])
+      if (isFirebaseConfigured && uid && db) {
+        await addDoc(collection(db, 'users', uid, 'sessions'), session)
+      } else {
+        const all = getStore<Session[]>(STORE_KEY, [])
+        const newSession: Session = { ...session, id: crypto.randomUUID() }
+        setStore(STORE_KEY, [...all, newSession])
+        setSessions((prev) => [newSession, ...prev])
+      }
+    },
+    [uid],
+  )
 
   const totalFocusMinutes = Math.floor(
     sessions.reduce((sum, s) => sum + s.durationMs, 0) / 60_000,

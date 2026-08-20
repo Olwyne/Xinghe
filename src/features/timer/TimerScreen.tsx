@@ -41,15 +41,15 @@ export function TimerScreen({ isDesktop }: TimerScreenProps) {
   const selectedTask = activeTasks.find((t) => t.id === selectedTaskId) ?? null
 
   const onFocusComplete = useCallback(
-    async (ms: number) => {
+    async (ms: number, startedAt: number) => {
       const pid = selectedTask?.projectId ?? 'inbox'
-      await recordSession(pid, ms, selectedTaskId ?? undefined)
+      await recordSession(pid, ms, startedAt, selectedTaskId ?? undefined)
       // Accumulate spent time on the task
       if (selectedTask && uid) {
         await updateTask(selectedTask.id, { spentMs: (selectedTask.spentMs ?? 0) + ms })
       }
     },
-    [recordSession],
+    [recordSession, selectedTask, selectedTaskId, uid, updateTask],
   )
 
   const { state, remaining, progress, start, pause, stop, skip, continueToNext } =

@@ -36,7 +36,7 @@ interface UseTimerReturn {
 
 export function useTimer(
   settings: TimerSettings,
-  onFocusComplete?: (durationMs: number) => void,
+  onFocusComplete?: (durationMs: number, startedAt: number) => void,
 ): UseTimerReturn {
   const onFocusCompleteRef = useRef(onFocusComplete)
   onFocusCompleteRef.current = onFocusComplete
@@ -66,7 +66,7 @@ export function useTimer(
       clearTick()
       setState(engineEnd(currentState))
       if (currentState.type === 'focus') {
-        onFocusCompleteRef.current?.(currentState.duration)
+        onFocusCompleteRef.current?.(currentState.duration, currentState.startedAt ?? Date.now())
       }
       playSessionEndSound()
 
@@ -140,7 +140,9 @@ export function useTimer(
     setState((prev) => {
       if (prev.type === 'focus' && (prev.status === 'running' || prev.status === 'paused')) {
         const elapsed = computeElapsedMs(prev, Date.now())
-        if (elapsed >= 60_000) onFocusCompleteRef.current?.(elapsed)
+        if (elapsed >= 60_000) {
+          onFocusCompleteRef.current?.(elapsed, prev.startedAt ?? Date.now() - elapsed)
+        }
       }
       return engineEnd(prev)
     })

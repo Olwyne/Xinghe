@@ -4,6 +4,9 @@ import { useWeekSessions } from '@/hooks/useWeekSessions'
 import { useHabits } from '@/hooks/useHabits'
 import { useHabitEntries } from '@/hooks/useHabitEntries'
 import { useDailyGoal } from '@/hooks/useDailyGoal'
+import { useProjects } from '@/hooks/useProjects'
+import { useProjectProgress } from '@/hooks/useProjectProgress'
+import { buildTargetRows } from '@/features/goals/progress'
 import { WeekChart } from './WeekChart'
 import './StatsScreen.css'
 
@@ -21,6 +24,9 @@ export function StatsScreen() {
 
   const { totalMinutes, byDay } = useWeekSessions(uid)
   const { targetMinutes } = useDailyGoal(uid)
+  const { projects } = useProjects(uid)
+  const { byProject } = useProjectProgress(uid)
+  const targetRows = buildTargetRows(projects, byProject)
   const { habits } = useHabits(uid)
   const { isCompletedToday, streakFor } = useHabitEntries(uid)
 
@@ -49,6 +55,33 @@ export function StatsScreen() {
         </div>
 
         <WeekChart days={byDay} accentColor={accentColor} />
+      </section>
+
+      <section className="stats-card">
+        <div className="stats-card__header">
+          <span className="stats-card__label">{t('stats.projectTargets')}</span>
+        </div>
+
+        {targetRows.length === 0 ? (
+          <p className="stats-card__empty">{t('stats.noProjectTargets')}</p>
+        ) : (
+          <ul className="stats-targets">
+            {targetRows.map((row) => (
+              <li key={row.projectId} className="stats-target">
+                <span className="stats-target__name">{row.name}</span>
+                <div className="stats-target__track">
+                  <div
+                    className="stats-target__fill"
+                    style={{ width: `${row.ratio * 100}%`, background: row.color }}
+                  />
+                </div>
+                <span className="stats-target__pct">
+                  {Math.round((row.spentMinutes / row.targetMinutes) * 100)}%
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="stats-card">

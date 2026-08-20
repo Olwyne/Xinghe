@@ -94,7 +94,9 @@
     "weekFocus": "Focus cette semaine",
     "weekTarget": "Objectif : {{target}} (lun–ven)",
     "todayHabits": "Habitudes aujourd'hui",
-    "noHabits": "Aucune habitude créée."
+    "noHabits": "Aucune habitude créée.",
+    "projectTargets": "Objectifs par projet",
+    "noProjectTargets": "Aucun objectif de temps défini."
   },
   "ritual": {
     "skip": "Passer le rituel"

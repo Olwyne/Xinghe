@@ -94,7 +94,9 @@
     "weekFocus": "Focus this week",
     "weekTarget": "Target: {{target}} (Mon–Fri)",
     "todayHabits": "Today's habits",
-    "noHabits": "No habits created yet."
+    "noHabits": "No habits created yet.",
+    "projectTargets": "Targets by project",
+    "noProjectTargets": "No time target set."
   },
   "ritual": {
     "skip": "Skip ritual"

@@ -283,9 +283,17 @@ Dans `src/hooks/useProjects.ts`, au tout début du corps de l'effet (avant le te
 
 Sans cela, un changement de compte affiche les projets du compte précédent avec `loading` déjà à `false`.
 
-- [ ] **Step 2: Libérer le chargement si l'amorçage échoue**
+- [ ] **Step 2: Libérer le chargement si l'amorçage échoue, sans toucher un effet nettoyé**
 
-Dans le callback de `onSnapshot`, remplacer la branche d'amorçage :
+`seedInbox(uid)` est un appel fire-and-forget : si `uid` change pendant qu'il est en vol, l'effet précédent est nettoyé mais la promesse continue de vivre dans sa fermeture. Si elle rejette après coup, son `.catch` ne doit pas appeler `setLoading(false)` sur l'effet du nouveau compte — sinon les projets du nouveau compte s'affichent comme chargés alors que leur snapshot n'est pas encore arrivé. Il faut donc un drapeau d'annulation capturé par la fermeture de l'effet.
+
+Au tout début du corps de l'effet, avant `setLoading(true)` :
+
+```ts
+    let cancelled = false
+```
+
+Puis, dans le callback de `onSnapshot`, remplacer la branche d'amorçage :
 
 ```ts
         if (data.length === 0 && !seededRef.current) {
@@ -302,26 +310,57 @@ par :
           seededRef.current = true
           // Le snapshot suivant libérera loading ; si l'amorçage échoue il ne
           // viendra jamais, donc on débloque l'UI ici plutôt que de la figer.
-          seedInbox(uid).catch(() => setLoading(false))
+          // On ignore ce déblocage si l'effet a été nettoyé entre-temps (uid a
+          // changé) pour ne pas afficher le nouveau compte comme chargé.
+          seedInbox(uid).catch(() => {
+            if (!cancelled) setLoading(false)
+          })
           return
         }
 ```
 
 `seedInbox` est déclarée `async function seedInbox(uid: string): Promise<void>` à la ligne 29 du même fichier, donc `.catch()` s'applique directement.
 
-- [ ] **Step 3: Ajouter le callback d'erreur**
+- [ ] **Step 3: Ajouter le callback d'erreur, garder la référence pour le nettoyage**
 
-`onSnapshot` prend un troisième argument. Remplacer la fermeture de l'appel pour ajouter :
+`onSnapshot` prend un troisième argument, et son retour (la fonction de désabonnement) doit être capturé dans une variable plutôt que retourné directement, car le nettoyage de l'effet doit maintenant faire deux choses : lever le drapeau d'annulation et se désabonner.
+
+Remplacer :
 
 ```ts
-      () => {
-        // Permission refusée, réseau coupé : on sort de l'état de chargement
-        // plutôt que de laisser les écrans sur des squelettes indéfiniment.
-        setLoading(false)
+    return onSnapshot(
+      query(colRef(uid), orderBy('order')),
+      (snapshot) => {
+        ...
       },
+    )
+  }, [uid])
 ```
 
-juste après le callback de snapshot, avant la parenthèse fermante de `onSnapshot(`.
+par :
+
+```ts
+    const unsubscribe = onSnapshot(
+      query(colRef(uid), orderBy('order')),
+      (snapshot) => {
+        ...
+      },
+      () => {
+        // Permission refusée, réseau coupé : on sort de l'état de chargement
+        // plutôt que de laisser les écrans sur des squelettes indéfiniment,
+        // sauf si l'effet a déjà été nettoyé (changement de compte).
+        if (!cancelled) setLoading(false)
+      },
+    )
+
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
+  }, [uid])
+```
+
+La branche de repli localStorage (avant l'appel à `onSnapshot`) continue de `return` sans rien — pas de souscription à nettoyer sur ce chemin, donc pas de fonction de nettoyage nécessaire.
 
 - [ ] **Step 4: Vérifier**
 

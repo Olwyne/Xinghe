@@ -142,6 +142,24 @@ describe('periodRange', () => {
 })
 ```
 
+> **Post-review fix (2026-08-20):** two problems in this last test. First, its
+> bounds (`167 <= hours <= 169`) can never catch the off-by-one-hour error its
+> name implies — it's a smoke test that a week is roughly seven days, not a
+> DST assertion, despite the name. Second, `now = at(2026, 3, 30, 12)` doesn't
+> even land in the transitioning week: with `dayStart=4`, that resolves to the
+> week Mon 30 Mar – Sun 5 Apr, entirely *after* the 29 March transition, so the
+> test measured a plain 168-hour week and happened to pass the loose bounds
+> without exercising DST at all.
+>
+> Fixed by strengthening rather than renaming: `now` moved to
+> `at(2026, 3, 25, 12)` (a Wednesday actually inside the Mon 23 – Sun 30 Mar
+> week that contains the transition), and the assertion tightened to the exact
+> boundaries (`r.start`/`r.end` against precise expected timestamps) and the
+> exact hour count (167, not a range). `process.env.TZ = 'Europe/Paris'` is set
+> at the top of the test file (via `globalThis`, since the project has no
+> `@types/node`) so this is meaningful regardless of the runner's ambient
+> timezone. See "Post-merge fixes" at the end of this document.
+
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `rtk npx vitest run src/lib/time.test.ts`
@@ -540,6 +558,32 @@ Puis, dans le corps du hook (même correction qu'au Step 1 : l'effet recalcule l
 - [ ] **Step 3: Test `bucketSessionsByDay`**
 
 Créer `src/hooks/useWeekSessions.test.ts` et pin la règle de bucketing : avec `dayStart = 4`, une session à 3h le jour D doit tomber dans le seau du jour D-1, une session à 5h le jour D doit tomber dans le seau du jour D, et une session matinale sur le dernier jour de la fenêtre ne doit pas disparaître (total conservé sur les 7 seaux).
+
+> **Post-review fix (2026-08-20):** the `bucketSessionsByDay` body above builds
+> each of the 7 bucket timestamps with `rangeStart + i * 86_400_000` — fixed-
+> millisecond arithmetic — while `periodRange` next to it uses calendar
+> arithmetic (`new Date(y, m, d + i)`). Across a DST transition, adding a fixed
+> 24h can land the last bucket an hour off from the intended local wall-clock
+> boundary. The shipped fix rebuilds the seven timestamps the way `periodRange`
+> does: recover the local calendar date of `rangeStart` (subtracting the
+> `dayStartHour` offset first, same as `periodRange`'s own `shifted`), then add
+> whole calendar days with `new Date(y, m, d + i)` and re-add the offset —
+> instead of accumulating `i * 86_400_000` ms.
+>
+> A regression test was added — `bucketSessionsByDay` over the DST week
+> Mon 2026-03-23 .. Sun 2026-03-29 (Europe spring-forward) must produce seven
+> distinct, consecutive calendar-date buckets. Investigation note for whoever
+> touches this next: this project's `getDayBoundary` (`src/lib/time.ts`) does
+> its own fixed-ms hour subtraction on an absolute timestamp before formatting
+> to a local calendar date, and — verified empirically across a full year of
+> weeks and every `dayStartHour` 0–23 — this happens to make the old
+> `rangeStart + i * 86_400_000` formula produce byte-identical output to the
+> calendar-arithmetic fix for this codebase's Europe DST rules (1-hour shift).
+> So the new test does not currently fail against the old code (confirmed by
+> temporarily restoring it). The calendar-arithmetic version is kept anyway as
+> the correct, non-coincidental implementation matching `periodRange`'s own
+> style, and the test is kept as a named regression guard rather than removed.
+> See "Post-merge fixes" at the end of this document for the full writeup.
 
 - [ ] **Step 4: Vérifier la compilation et les tests**
 
@@ -1301,6 +1345,16 @@ describe('buildTargetRows', () => {
 })
 ```
 
+> **Post-review fix (2026-08-20):** `préserve l'ordre des projets` only checked
+> `rows[0].projectId`, which can't distinguish "correct order" from "thesis
+> happens to be first for any reason." Strengthened to assert the full ordered
+> array of ids (`['thesis', 'sport']`). Two more cases were also added to this
+> describe block: the `month` branch of `PERIOD_LABEL_KEY` (previously only
+> `day`/`week` were exercised — a typo in the map would have shipped silently)
+> and an explicit check that `TargetRow.rawRatio` (see the `buildTargetRows`
+> fix above) stays unclamped above 1 while `ratio` stays clamped at 1. See
+> "Post-merge fixes" at the end of this document.
+
 Et compléter l'import en haut du fichier de test :
 
 ```ts
@@ -1337,6 +1391,8 @@ export interface TargetRow {
   spentMinutes: number
   targetMinutes: number
   ratio: number
+  /** Non borné, identique à ProjectProgress.rawRatio — pour afficher le pourcentage réel. */
+  rawRatio: number
   isExceeded: boolean
   periodKey: 'thisDay' | 'thisWeek' | 'thisMonth'
 }
@@ -1358,6 +1414,7 @@ export function buildTargetRows(
       spentMinutes: progress.spentMinutes,
       targetMinutes: progress.targetMinutes,
       ratio: progress.ratio,
+      rawRatio: progress.rawRatio,
       isExceeded: progress.rawRatio > 1,
       periodKey: PERIOD_LABEL_KEY[p.timeTarget.period],
     })
@@ -1366,10 +1423,15 @@ export function buildTargetRows(
 }
 ```
 
+> **Post-review fix (2026-08-20):** `TargetRow` gained `rawRatio`, carried through
+> unclamped from `ProjectProgress.rawRatio`, so Stats can render the true
+> percentage instead of recomputing `spentMinutes / targetMinutes` itself. See
+> "Post-merge fixes" at the end of this document.
+
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `rtk npx vitest run src/features/goals/progress.test.ts`
-Expected: PASS, 21 tests.
+Expected: PASS, 21 tests (23 after the post-review fixes below).
 
 - [ ] **Step 5: Écrire la section**
 
@@ -1669,6 +1731,18 @@ Insérer la carte après la carte « focus de la semaine » et avant la carte de
 
 Note : `row.targetMinutes` est toujours ≥ 1 (validé à la saisie, Task 7), donc la division est sûre.
 
+> **Post-review fix (2026-08-20):** this snippet is superseded — see "Post-merge
+> fixes" at the end of this document. Two problems shipped with the code above:
+> (1) it recomputes `spentMinutes / targetMinutes` instead of using
+> `buildTargetRows`'s own `rawRatio`, a second unguarded expression of a value
+> already computed once, which also renders `NaN%` if a zero-target row ever
+> reaches this screen; (2) `useProjectProgress`'s `loading` flag was discarded,
+> so this card shows the empty state during the initial Firestore round-trip
+> before popping in the real rows — inconsistent with the skeleton
+> `TimeTargetsSection` shows for the same hook. The shipped version uses
+> `row.rawRatio` and renders a `stats-targets__skeletons` block while
+> `progressLoading` is true, before the empty-state branch.
+
 - [ ] **Step 3: Ajouter les styles**
 
 Ajouter à la fin de `src/features/stats/StatsScreen.css` :
@@ -1765,3 +1839,63 @@ Arrêter le serveur.
 ```bash
 rtk git add -A && rtk git commit -m "fix: address issues found during final verification"
 ```
+
+---
+
+## Post-merge fixes (2026-08-20)
+
+A whole-branch code review before merge surfaced five issues, addressed
+together. Inline `> **Post-review fix**` notes above mark the affected task
+sections; this is the consolidated record.
+
+1. **Stats recomputed a ratio it already had.** `StatsScreen.tsx` rendered
+   `Math.round((row.spentMinutes / row.targetMinutes) * 100)` — a second,
+   unguarded expression of a value `buildTargetRows` already computes, and one
+   that renders `NaN%` if a zero-target row ever reaches the screen (unlike
+   `aggregateByProject`, which guards that case). `TargetRow` gained
+   `rawRatio` (carried through unclamped from `ProjectProgress.rawRatio`), and
+   Stats now renders `Math.round(row.rawRatio * 100)`. Test added in
+   `progress.test.ts` asserting `rawRatio` survives onto the row unclamped.
+
+2. **Stats showed the empty state while still loading.** `StatsScreen`
+   discarded `useProjectProgress`'s `loading` flag, so a user with targets saw
+   "no target defined" during the initial Firestore round-trip before the real
+   list popped in — inconsistent with the skeleton `TimeTargetsSection` shows
+   for the same hook. `StatsScreen` now destructures `loading` and renders a
+   `stats-targets__skeletons` block (new CSS in `StatsScreen.css`, styled to
+   match the `stats-card` layout rather than reusing `tts__skeleton`, since the
+   two screens deliberately keep separate styles) before the empty-state
+   branch.
+
+3. **DST drift in the weekly chart buckets.** `useWeekSessions.ts` built its
+   seven bucket timestamps with `rangeStart + i * 86_400_000` (fixed-ms)
+   instead of calendar arithmetic like `periodRange`. Fixed to recover the
+   local calendar date of the range start and add whole days with
+   `new Date(y, m, d + i)`, matching `periodRange`'s own style. A regression
+   test (DST week Mon 2026-03-23 – Sun 2026-03-29, `TZ=Europe/Paris`) asserts
+   seven distinct, consecutive calendar-date buckets. Discrimination check:
+   temporarily restoring the old fixed-ms line and rerunning showed the test
+   still **passes** against the old code — investigation (a sweep across a
+   full year of weeks and every `dayStartHour` 0–23) found this project's
+   `getDayBoundary` happens to cancel the drift for every case tried under
+   Europe's 1-hour DST shift, so old and new code are behaviourally identical
+   here. The calendar-arithmetic version is kept anyway as the correct,
+   non-coincidental implementation; the test is kept as a named regression
+   guard, with this finding documented in its comments rather than silently
+   claiming coverage it doesn't have.
+
+4. **Two tests that would pass against broken implementations.**
+   - `time.test.ts`'s DST week test asserted only `167 <= hours <= 169`
+     (a smoke test that a week is ~7 days, not a real DST assertion — and its
+     `now` didn't even land in the transitioning week). Strengthened in place:
+     moved `now` into the actual transitioning week and tightened to exact
+     boundaries and an exact 167-hour count, under a pinned `TZ=Europe/Paris`.
+   - `progress.test.ts`'s "préserve l'ordre des projets" asserted only
+     `rows[0].projectId`. Strengthened to assert the full ordered array of ids.
+
+5. **Untested month branch.** `PERIOD_LABEL_KEY`'s `month` case had no test
+   (`day` and `week` were covered); a typo would have shipped a raw i18n key.
+   Added to `progress.test.ts`.
+
+No new npm dependencies, no new CSS custom properties, no `--noEmit false`.
+Full suite: 83 tests passing (up from 80).

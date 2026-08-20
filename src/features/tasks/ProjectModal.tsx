@@ -36,6 +36,10 @@ function ProjectRow({
 
   const totalMinutes = parseTargetMinutes(hours, mins)
   const targetValid = totalMinutes === 0 || isValidTarget(period, totalMinutes)
+  // totalMinutes is 0 only in the silent "no target" case, handled above; when
+  // !targetValid it is never 0, so exactly one of these branches ever fires.
+  const targetTooSmall = !targetValid && totalMinutes < 1
+  const errorId = `pm-target-error-${project.id}`
 
   function save() {
     const trimmed = name.trim()
@@ -80,6 +84,8 @@ function ProjectRow({
               value={hours}
               onChange={(e) => setHours(e.target.value)}
               aria-label={t('goals.targetHours')}
+              aria-describedby={!targetValid ? errorId : undefined}
+              aria-invalid={!targetValid}
             />
             <span>{t('goals.targetHours')}</span>
             <input
@@ -90,6 +96,8 @@ function ProjectRow({
               value={mins}
               onChange={(e) => setMins(e.target.value)}
               aria-label={t('goals.targetMinutes')}
+              aria-describedby={!targetValid ? errorId : undefined}
+              aria-invalid={!targetValid}
             />
             <span>{t('goals.targetMinutes')}</span>
           </div>
@@ -105,8 +113,10 @@ function ProjectRow({
             ))}
           </div>
           {!targetValid && (
-            <p className="pm-row__target-error">
-              {t('goals.targetTooLarge', { max: formatMinutesToHours(MAX_MINUTES[period]) })}
+            <p className="pm-row__target-error" id={errorId}>
+              {targetTooSmall
+                ? t('goals.targetTooSmall')
+                : t('goals.targetTooLarge', { max: formatMinutesToHours(MAX_MINUTES[period]) })}
             </p>
           )}
           <button

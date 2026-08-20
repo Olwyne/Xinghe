@@ -151,6 +151,7 @@
     "thisWeek": "this week",
     "thisMonth": "this month",
     "targetTooLarge": "At most {{max}} for this cadence.",
+    "targetTooSmall": "The target must be at least one minute.",
     "overAllocated": "Your targets add up to {{total}} per day, above your global goal of {{global}}.",
     "empty": "No project has a time target yet. Add one from project management."
   }

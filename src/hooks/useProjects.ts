@@ -49,6 +49,8 @@ export function useProjects(uid: string | null) {
   const seededRef = useRef(false)
 
   useEffect(() => {
+    setLoading(true)
+    seededRef.current = false
     if (!isFirebaseConfigured || !uid || !db) {
       let stored = getStore<Project[]>(LS_KEY, [])
       if (stored.length === 0) {
@@ -66,10 +68,17 @@ export function useProjects(uid: string | null) {
         const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Project)
         if (data.length === 0 && !seededRef.current) {
           seededRef.current = true
-          seedInbox(uid)
+          // Le snapshot suivant libérera loading ; si l'amorçage échoue il ne
+          // viendra jamais, donc on débloque l'UI ici plutôt que de la figer.
+          seedInbox(uid).catch(() => setLoading(false))
           return
         }
         setProjects(data)
+        setLoading(false)
+      },
+      () => {
+        // Permission refusée, réseau coupé : on sort de l'état de chargement
+        // plutôt que de laisser les écrans sur des squelettes indéfiniment.
         setLoading(false)
       },
     )

@@ -2,13 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Project, TargetPeriod } from './types'
 import { PROJECT_COLORS } from './constants'
+import { isValidTarget, parseTargetMinutes } from './targetValidation'
 import './ProjectModal.css'
-
-const MAX_MINUTES: Record<TargetPeriod, number> = { day: 1440, week: 10080, month: 44640 }
-
-function isValidTarget(period: TargetPeriod, minutes: number): boolean {
-  return Number.isInteger(minutes) && minutes >= 1 && minutes <= MAX_MINUTES[period]
-}
 
 interface ProjectModalProps {
   projects: Project[]
@@ -38,7 +33,7 @@ function ProjectRow({
   const [hours, setHours] = useState(String(Math.floor((project.timeTarget?.targetMinutes ?? 0) / 60)))
   const [mins, setMins] = useState(String((project.timeTarget?.targetMinutes ?? 0) % 60))
 
-  const totalMinutes = (parseInt(hours, 10) || 0) * 60 + (parseInt(mins, 10) || 0)
+  const totalMinutes = parseTargetMinutes(hours, mins)
   const targetValid = totalMinutes === 0 || isValidTarget(period, totalMinutes)
 
   function save() {

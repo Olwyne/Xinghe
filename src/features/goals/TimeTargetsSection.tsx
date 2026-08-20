@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
-import { useProjects } from '@/hooks/useProjects'
 import { useProjectProgress } from '@/hooks/useProjectProgress'
 import { buildTargetRows } from './progress'
 import { formatMinutesToHours } from '@/lib/time'
@@ -10,8 +9,7 @@ export function TimeTargetsSection() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const uid = user?.uid ?? null
-  const { projects } = useProjects(uid)
-  const { byProject, allocation, loading } = useProjectProgress(uid)
+  const { projects, byProject, allocation, loading } = useProjectProgress(uid)
 
   const rows = buildTargetRows(projects, byProject)
 

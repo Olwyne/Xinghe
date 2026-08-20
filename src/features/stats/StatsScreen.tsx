@@ -4,7 +4,6 @@ import { useWeekSessions } from '@/hooks/useWeekSessions'
 import { useHabits } from '@/hooks/useHabits'
 import { useHabitEntries } from '@/hooks/useHabitEntries'
 import { useDailyGoal } from '@/hooks/useDailyGoal'
-import { useProjects } from '@/hooks/useProjects'
 import { useProjectProgress } from '@/hooks/useProjectProgress'
 import { buildTargetRows } from '@/features/goals/progress'
 import { WeekChart } from './WeekChart'
@@ -24,8 +23,7 @@ export function StatsScreen() {
 
   const { totalMinutes, byDay } = useWeekSessions(uid)
   const { targetMinutes } = useDailyGoal(uid)
-  const { projects } = useProjects(uid)
-  const { byProject, loading: progressLoading } = useProjectProgress(uid)
+  const { projects, byProject, loading: progressLoading } = useProjectProgress(uid)
   const targetRows = buildTargetRows(projects, byProject)
   const { habits } = useHabits(uid)
   const { isCompletedToday, streakFor } = useHabitEntries(uid)

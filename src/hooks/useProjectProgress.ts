@@ -13,10 +13,12 @@ import {
   type Allocation,
 } from '@/features/goals/progress'
 import type { Session } from '@/features/goals/types'
+import type { Project } from '@/features/tasks/types'
 
 const LS_KEY = 'xinghe-sessions'
 
 export function useProjectProgress(uid: string | null): {
+  projects: Project[]
   byProject: Record<string, ProjectProgress>
   allocation: Allocation
   loading: boolean
@@ -86,5 +88,5 @@ export function useProjectProgress(uid: string | null): {
     [projects, targetMinutes],
   )
 
-  return { byProject, allocation, loading: projectsLoading || sessionsLoading }
+  return { projects, byProject, allocation, loading: projectsLoading || sessionsLoading }
 }

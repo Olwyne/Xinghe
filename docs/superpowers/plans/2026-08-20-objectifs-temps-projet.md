@@ -257,7 +257,7 @@ Dans `src/features/goals/types.ts`, dans l'interface `Session`, après `duration
 
 - [ ] **Step 3: Vérifier la compilation**
 
-Run: `rtk npx tsc -b --noEmit false`
+Run: `rtk npx tsc -b`
 Expected: aucune erreur.
 
 - [ ] **Step 4: Commit**
@@ -372,7 +372,7 @@ Le tableau de dépendances était incomplet (`[recordSession]` seul) et capturai
 
 - [ ] **Step 4: Vérifier la compilation et la suite de tests**
 
-Run: `rtk npx tsc -b --noEmit false && rtk npx vitest run`
+Run: `rtk npx tsc -b && rtk npx vitest run`
 Expected: aucune erreur TypeScript, tous les tests existants passent.
 
 - [ ] **Step 5: Commit**
@@ -486,7 +486,7 @@ Le calcul de `byDay` utilise `weekStart()` : remplacer les deux occurrences par 
 
 - [ ] **Step 3: Vérifier la compilation et les tests**
 
-Run: `rtk npx tsc -b --noEmit false && rtk npx vitest run`
+Run: `rtk npx tsc -b && rtk npx vitest run`
 Expected: aucune erreur, tests existants au vert.
 
 - [ ] **Step 4: Vérifier à la main dans l'app**
@@ -907,7 +907,7 @@ export function useProjectProgress(uid: string | null): {
 
 - [ ] **Step 2: Vérifier la compilation**
 
-Run: `rtk npx tsc -b --noEmit false`
+Run: `rtk npx tsc -b`
 Expected: aucune erreur.
 
 - [ ] **Step 3: Commit**
@@ -1162,7 +1162,7 @@ Si les variables `--xh-surface-2` ou `--xh-border` n'existent pas dans `src/styl
 
 - [ ] **Step 5: Vérifier compilation et rendu**
 
-Run: `rtk npx tsc -b --noEmit false && rtk npm run dev`
+Run: `rtk npx tsc -b && rtk npm run dev`
 Ouvrir l'écran Tâches → gestion des projets → éditer un projet : régler 6 h 0 min / Semaine, sauvegarder, rouvrir et vérifier que la valeur est bien rechargée. Vérifier que « Aucune cible » remet les champs à zéro et que sauvegarder efface la cible. Arrêter le serveur.
 
 - [ ] **Step 6: Commit**
@@ -1514,7 +1514,7 @@ Dans `src/App.tsx`, remplacer l'import de `HabitsScreen` par `import { GoalsScre
 
 - [ ] **Step 7: Vérifier**
 
-Run: `rtk npx tsc -b --noEmit false && rtk npx vitest run && rtk npm run dev`
+Run: `rtk npx tsc -b && rtk npx vitest run && rtk npm run dev`
 Ouvrir l'onglet Objectifs : la section apparaît au-dessus des habitudes. Sans cible définie → message d'état vide. Avec une cible et une session enregistrée → barre remplie. Régler une cible à 30 min/jour avec un objectif global de 90 min et deux autres projets à 60 min/jour chacun → le bandeau de sur-allocation apparaît. Arrêter le serveur.
 
 - [ ] **Step 8: Commit**
@@ -1651,7 +1651,7 @@ Ajouter à la fin de `src/features/stats/StatsScreen.css` :
 
 - [ ] **Step 4: Vérifier**
 
-Run: `rtk npx tsc -b --noEmit false && rtk npx vitest run && rtk npm run dev`
+Run: `rtk npx tsc -b && rtk npx vitest run && rtk npm run dev`
 Ouvrir l'onglet Stats : la carte affiche une ligne par projet ayant une cible, avec le pourcentage. Sans cible → message d'état vide. Arrêter le serveur.
 
 - [ ] **Step 5: Commit**

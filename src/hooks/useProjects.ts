@@ -51,6 +51,7 @@ export function useProjects(uid: string | null) {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setProjects([])
     seededRef.current = false
     if (!isFirebaseConfigured || !uid || !db) {
       let stored = getStore<Project[]>(LS_KEY, [])

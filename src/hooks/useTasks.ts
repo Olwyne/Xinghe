@@ -3,7 +3,6 @@ import {
   collection,
   query,
   orderBy,
-  where,
   onSnapshot,
   addDoc,
   updateDoc,
@@ -36,14 +35,17 @@ export function useTasks(uid: string | null, projectId: string) {
       return
     }
 
-    const constraints = projectId === 'all'
-      ? [orderBy('order')]
-      : [where('projectId', '==', projectId), orderBy('order')]
-
+    // Subscribe to every task and filter locally: a `where` + `orderBy`
+    // query would need a composite index, and its failure is silent.
     return onSnapshot(
-      query(colRef(uid), ...constraints),
+      query(colRef(uid), orderBy('order')),
       (snapshot) => {
-        setTasks(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Task))
+        const all = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Task)
+        setTasks(projectId === 'all' ? all : all.filter((t) => t.projectId === projectId))
+        setLoading(false)
+      },
+      (error) => {
+        console.error('[useTasks] snapshot failed', error)
         setLoading(false)
       },
     )

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useProjects } from '@/hooks/useProjects'
@@ -25,6 +25,21 @@ export function TasksScreen() {
 
   const selectedProject = projects.find((p) => p.id === selectedId)
   const accentColor = selectedProject?.color ?? 'var(--xh-focus)'
+
+  const projectColors = useMemo(
+    () => Object.fromEntries(projects.map((p) => [p.id, p.color])),
+    [projects],
+  )
+
+  // Project the next task lands in: follows the selected tab by default,
+  // but stays wherever the user last pointed the picker.
+  const [targetProjectId, setTargetProjectId] = useState('')
+  useEffect(() => {
+    const fallback = projects.find((p) => p.isInbox)?.id ?? projects[0]?.id ?? ''
+    setTargetProjectId(selectedId === 'all' ? fallback : selectedId)
+  }, [selectedId, projects])
+
+  const targetColor = projectColors[targetProjectId] ?? accentColor
 
   return (
     <div className="tasks-screen">
@@ -58,20 +73,19 @@ export function TasksScreen() {
           <div className="tasks-screen__list">
             <TaskList
               tasks={tasks}
-              projectColor={accentColor}
+              projectColors={projectColors}
+              fallbackColor={accentColor}
               onToggle={toggleComplete}
               onDelete={deleteTask}
             />
           </div>
 
           <AddTaskInput
-            onAdd={(title) => {
-              const pid = selectedId === 'all'
-                ? (projects.find((p) => p.isInbox)?.id ?? projects[0]?.id ?? '')
-                : selectedId
-              addTask(title, pid)
-            }}
-            accentColor={accentColor}
+            projects={projects}
+            projectId={targetProjectId}
+            onProjectChange={setTargetProjectId}
+            onAdd={(title) => addTask(title, targetProjectId)}
+            accentColor={targetColor}
           />
         </>
       )}

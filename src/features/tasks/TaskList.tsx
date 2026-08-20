@@ -5,12 +5,13 @@ import './TaskList.css'
 
 interface TaskListProps {
   tasks: Task[]
-  projectColor: string
+  projectColors: Record<string, string>
+  fallbackColor: string
   onToggle: (id: string) => void
   onDelete: (id: string) => void
 }
 
-export function TaskList({ tasks, projectColor, onToggle, onDelete }: TaskListProps) {
+export function TaskList({ tasks, projectColors, fallbackColor, onToggle, onDelete }: TaskListProps) {
   const { t } = useTranslation()
 
   const active = tasks.filter((t) => !t.completed)
@@ -30,7 +31,7 @@ export function TaskList({ tasks, projectColor, onToggle, onDelete }: TaskListPr
         <TaskItem
           key={task.id}
           task={task}
-          projectColor={projectColor}
+          projectColor={projectColors[task.projectId] ?? fallbackColor}
           onToggle={onToggle}
           onDelete={onDelete}
         />
@@ -44,7 +45,7 @@ export function TaskList({ tasks, projectColor, onToggle, onDelete }: TaskListPr
             <TaskItem
               key={task.id}
               task={task}
-              projectColor={projectColor}
+              projectColor={projectColors[task.projectId] ?? fallbackColor}
               onToggle={onToggle}
               onDelete={onDelete}
             />

@@ -56,7 +56,8 @@
     "addPlaceholder": "Nouvelle tâche…",
     "completed": "Terminées ({{count}})",
     "viewList": "Liste",
-    "viewMatrix": "Matrice"
+    "viewMatrix": "Matrice",
+    "chooseProject": "Choisir le projet"
   },
   "matrix": {
     "q1Label": "Faire",

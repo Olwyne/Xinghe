@@ -81,6 +81,16 @@ describe('computeAllocation', () => {
     expect(a.isOverAllocated).toBe(false)
   })
 
+  it('signale un dépassement inférieur à la minute', () => {
+    // 1263 min/semaine = 180,43 min/jour, juste au-dessus d'un objectif de 180
+    const a = computeAllocation(
+      [project('a', { period: 'week', targetMinutes: 1263 })],
+      180,
+    )
+    expect(a.totalTargetPerDay).toBe(180)
+    expect(a.isOverAllocated).toBe(true)
+  })
+
   it('ignore les projets sans cible', () => {
     const a = computeAllocation([project('a', null), project('b', undefined)], 180)
     expect(a.totalTargetPerDay).toBe(0)

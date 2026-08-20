@@ -2,13 +2,9 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Project, TargetPeriod } from './types'
 import { PROJECT_COLORS } from './constants'
+import { isValidTarget, parseTargetMinutes, MAX_MINUTES } from './targetValidation'
+import { formatMinutesToHours } from '@/lib/time'
 import './ProjectModal.css'
-
-const MAX_MINUTES: Record<TargetPeriod, number> = { day: 1440, week: 10080, month: 44640 }
-
-function isValidTarget(period: TargetPeriod, minutes: number): boolean {
-  return Number.isInteger(minutes) && minutes >= 1 && minutes <= MAX_MINUTES[period]
-}
 
 interface ProjectModalProps {
   projects: Project[]
@@ -38,8 +34,12 @@ function ProjectRow({
   const [hours, setHours] = useState(String(Math.floor((project.timeTarget?.targetMinutes ?? 0) / 60)))
   const [mins, setMins] = useState(String((project.timeTarget?.targetMinutes ?? 0) % 60))
 
-  const totalMinutes = (parseInt(hours, 10) || 0) * 60 + (parseInt(mins, 10) || 0)
+  const totalMinutes = parseTargetMinutes(hours, mins)
   const targetValid = totalMinutes === 0 || isValidTarget(period, totalMinutes)
+  // totalMinutes is 0 only in the silent "no target" case, handled above; when
+  // !targetValid it is never 0, so exactly one of these branches ever fires.
+  const targetTooSmall = !targetValid && totalMinutes < 1
+  const errorId = `pm-target-error-${project.id}`
 
   function save() {
     const trimmed = name.trim()
@@ -84,6 +84,8 @@ function ProjectRow({
               value={hours}
               onChange={(e) => setHours(e.target.value)}
               aria-label={t('goals.targetHours')}
+              aria-describedby={!targetValid ? errorId : undefined}
+              aria-invalid={!targetValid}
             />
             <span>{t('goals.targetHours')}</span>
             <input
@@ -94,6 +96,8 @@ function ProjectRow({
               value={mins}
               onChange={(e) => setMins(e.target.value)}
               aria-label={t('goals.targetMinutes')}
+              aria-describedby={!targetValid ? errorId : undefined}
+              aria-invalid={!targetValid}
             />
             <span>{t('goals.targetMinutes')}</span>
           </div>
@@ -108,6 +112,13 @@ function ProjectRow({
               </button>
             ))}
           </div>
+          {!targetValid && (
+            <p className="pm-row__target-error" id={errorId}>
+              {targetTooSmall
+                ? t('goals.targetTooSmall')
+                : t('goals.targetTooLarge', { max: formatMinutesToHours(MAX_MINUTES[period]) })}
+            </p>
+          )}
           <button
             className="pm-row__target-clear"
             onClick={() => { setHours('0'); setMins('0') }}

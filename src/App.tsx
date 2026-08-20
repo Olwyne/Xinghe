@@ -28,6 +28,9 @@ function AppShell() {
       accentColor={accentColor}
       isDesktop={desktop}
     >
+      {/* `key={tab}` unmounts and remounts every screen on tab switch. This is what
+          currently masks any settings-sharing bug: every consumer re-reads
+          localStorage on mount anyway. Dropping this key would surface such bugs. */}
       <div key={tab} style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'xh-fade-in 0.22s ease both' }}>
         {tab === 'timer' && <TimerScreen isDesktop={desktop} />}
         {tab === 'tasks' && <TasksScreen />}

@@ -49,6 +49,10 @@ export function useProjects(uid: string | null) {
   const seededRef = useRef(false)
 
   useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setProjects([])
+    seededRef.current = false
     if (!isFirebaseConfigured || !uid || !db) {
       let stored = getStore<Project[]>(LS_KEY, [])
       if (stored.length === 0) {
@@ -60,19 +64,36 @@ export function useProjects(uid: string | null) {
       return
     }
 
-    return onSnapshot(
+    const unsubscribe = onSnapshot(
       query(colRef(uid), orderBy('order')),
       (snapshot) => {
         const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Project)
         if (data.length === 0 && !seededRef.current) {
           seededRef.current = true
-          seedInbox(uid)
+          // Le snapshot suivant libérera loading ; si l'amorçage échoue il ne
+          // viendra jamais, donc on débloque l'UI ici plutôt que de la figer.
+          // On ignore ce déblocage si l'effet a été nettoyé entre-temps (uid a
+          // changé) pour ne pas afficher le nouveau compte comme chargé.
+          seedInbox(uid).catch(() => {
+            if (!cancelled) setLoading(false)
+          })
           return
         }
         setProjects(data)
         setLoading(false)
       },
+      () => {
+        // Permission refusée, réseau coupé : on sort de l'état de chargement
+        // plutôt que de laisser les écrans sur des squelettes indéfiniment,
+        // sauf si l'effet a déjà été nettoyé (changement de compte).
+        if (!cancelled) setLoading(false)
+      },
     )
+
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
   }, [uid])
 
   const persist = useCallback((updated: Project[]) => {

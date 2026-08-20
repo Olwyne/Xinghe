@@ -1,6 +1,6 @@
 # Purge du backlog de suivi des objectifs de temps — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Solder les défauts relevés en revue lors de la livraison des objectifs de temps par projet, avant qu'ils ne deviennent des pièges pour le sous-projet suivant.
 
@@ -61,7 +61,7 @@ Le défaut : `useTimerSettings` appelle `useState` dans chaque composant, donc c
 - Consumes: `TimerSettings` et `DEFAULT_SETTINGS` de `@/features/timer/timerEngine`
 - Produces: `settingsStore` avec `getSnapshot(): TimerSettings`, `subscribe(listener: () => void): () => void`, `setSettings(update: Partial<TimerSettings>): void`, `resetForTests(): void`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Créer `src/lib/settingsStore.test.ts` :
 
@@ -153,12 +153,12 @@ describe('settingsStore', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `rtk npx vitest run src/lib/settingsStore.test.ts`
 Expected: FAIL — `Failed to resolve import "./settingsStore"`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Créer `src/lib/settingsStore.ts` :
 
@@ -215,12 +215,12 @@ function createSettingsStore() {
 export const settingsStore = createSettingsStore()
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `rtk npx vitest run src/lib/settingsStore.test.ts`
 Expected: PASS, 9 tests.
 
-- [ ] **Step 5: Rebrancher le hook sur le store**
+- [x] **Step 5: Rebrancher le hook sur le store**
 
 Remplacer intégralement `src/hooks/useTimerSettings.ts` :
 
@@ -240,18 +240,18 @@ export function useTimerSettings() {
 }
 ```
 
-- [ ] **Step 6: Vérifier**
+- [x] **Step 6: Vérifier**
 
 Run: `rtk npx tsc -b && rtk npm test`
 Expected: aucune erreur de type, 92 tests au vert (83 + 9).
 
-- [ ] **Step 7: Vérifier la propagation dans l'app**
+- [ ] **Step 7: Vérifier la propagation dans l'app** (non exécuté : le serveur de dev de ce harnais tourne depuis le checkout principal, pas depuis ce worktree ; de plus l'étape telle qu'écrite est inexécutable — elle demande de changer la frontière de journée « sans changer d'onglet », mais atteindre l'écran Réglages est justement un changement d'onglet, et le `key={tab}` de `App.tsx` fait que chaque consommateur relit `localStorage` au remontage quoi qu'il arrive)
 
 Run: `rtk npm run dev`
 
 Régler une cible de 30 min/jour sur un projet, enregistrer une session, ouvrir l'écran Objectifs, puis **sans changer d'onglet entre-temps** ouvrir les Réglages et modifier la frontière de journée. Revenir aux Objectifs : la progression doit refléter la nouvelle frontière. Arrêter le serveur.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 rtk git add src/lib/settingsStore.ts src/lib/settingsStore.test.ts src/hooks/useTimerSettings.ts && rtk git commit -m "fix: share timer settings through a single store"
@@ -272,7 +272,7 @@ Trois trous dans le même effet : l'abonnement `onSnapshot` n'a pas de callback 
 
 Aucun test unitaire : ce hook est du câblage Firestore et le projet n'a pas d'infrastructure de test de hooks. La vérification est le type check, la suite existante et le contrôle manuel.
 
-- [ ] **Step 1: Remettre `loading` à true au changement d'utilisateur**
+- [x] **Step 1: Remettre `loading` à true au changement d'utilisateur**
 
 Dans `src/hooks/useProjects.ts`, au tout début du corps de l'effet (avant le test `if (!isFirebaseConfigured || !uid || !db)`) :
 
@@ -283,9 +283,17 @@ Dans `src/hooks/useProjects.ts`, au tout début du corps de l'effet (avant le te
 
 Sans cela, un changement de compte affiche les projets du compte précédent avec `loading` déjà à `false`.
 
-- [ ] **Step 2: Libérer le chargement si l'amorçage échoue**
+- [x] **Step 2: Libérer le chargement si l'amorçage échoue, sans toucher un effet nettoyé**
 
-Dans le callback de `onSnapshot`, remplacer la branche d'amorçage :
+`seedInbox(uid)` est un appel fire-and-forget : si `uid` change pendant qu'il est en vol, l'effet précédent est nettoyé mais la promesse continue de vivre dans sa fermeture. Si elle rejette après coup, son `.catch` ne doit pas appeler `setLoading(false)` sur l'effet du nouveau compte — sinon les projets du nouveau compte s'affichent comme chargés alors que leur snapshot n'est pas encore arrivé. Il faut donc un drapeau d'annulation capturé par la fermeture de l'effet.
+
+Au tout début du corps de l'effet, avant `setLoading(true)` :
+
+```ts
+    let cancelled = false
+```
+
+Puis, dans le callback de `onSnapshot`, remplacer la branche d'amorçage :
 
 ```ts
         if (data.length === 0 && !seededRef.current) {
@@ -302,33 +310,64 @@ par :
           seededRef.current = true
           // Le snapshot suivant libérera loading ; si l'amorçage échoue il ne
           // viendra jamais, donc on débloque l'UI ici plutôt que de la figer.
-          seedInbox(uid).catch(() => setLoading(false))
+          // On ignore ce déblocage si l'effet a été nettoyé entre-temps (uid a
+          // changé) pour ne pas afficher le nouveau compte comme chargé.
+          seedInbox(uid).catch(() => {
+            if (!cancelled) setLoading(false)
+          })
           return
         }
 ```
 
 `seedInbox` est déclarée `async function seedInbox(uid: string): Promise<void>` à la ligne 29 du même fichier, donc `.catch()` s'applique directement.
 
-- [ ] **Step 3: Ajouter le callback d'erreur**
+- [x] **Step 3: Ajouter le callback d'erreur, garder la référence pour le nettoyage**
 
-`onSnapshot` prend un troisième argument. Remplacer la fermeture de l'appel pour ajouter :
+`onSnapshot` prend un troisième argument, et son retour (la fonction de désabonnement) doit être capturé dans une variable plutôt que retourné directement, car le nettoyage de l'effet doit maintenant faire deux choses : lever le drapeau d'annulation et se désabonner.
+
+Remplacer :
 
 ```ts
-      () => {
-        // Permission refusée, réseau coupé : on sort de l'état de chargement
-        // plutôt que de laisser les écrans sur des squelettes indéfiniment.
-        setLoading(false)
+    return onSnapshot(
+      query(colRef(uid), orderBy('order')),
+      (snapshot) => {
+        ...
       },
+    )
+  }, [uid])
 ```
 
-juste après le callback de snapshot, avant la parenthèse fermante de `onSnapshot(`.
+par :
 
-- [ ] **Step 4: Vérifier**
+```ts
+    const unsubscribe = onSnapshot(
+      query(colRef(uid), orderBy('order')),
+      (snapshot) => {
+        ...
+      },
+      () => {
+        // Permission refusée, réseau coupé : on sort de l'état de chargement
+        // plutôt que de laisser les écrans sur des squelettes indéfiniment,
+        // sauf si l'effet a déjà été nettoyé (changement de compte).
+        if (!cancelled) setLoading(false)
+      },
+    )
+
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
+  }, [uid])
+```
+
+La branche de repli localStorage (avant l'appel à `onSnapshot`) continue de `return` sans rien — pas de souscription à nettoyer sur ce chemin, donc pas de fonction de nettoyage nécessaire.
+
+- [x] **Step 4: Vérifier**
 
 Run: `rtk npx tsc -b && rtk npm test`
 Expected: aucune erreur de type, 92 tests au vert.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 rtk git add src/hooks/useProjects.ts && rtk git commit -m "fix: never leave useProjects stuck in a loading state"
@@ -349,7 +388,7 @@ rtk git add src/hooks/useProjects.ts && rtk git commit -m "fix: never leave useP
 - Consumes: `TargetPeriod` de `./types`
 - Produces: `MAX_MINUTES: Record<TargetPeriod, number>`, `isValidTarget(period: TargetPeriod, minutes: number): boolean`, `parseTargetMinutes(hours: string, mins: string): number`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Créer `src/features/tasks/targetValidation.test.ts` :
 
@@ -424,12 +463,12 @@ describe('parseTargetMinutes', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `rtk npx vitest run src/features/tasks/targetValidation.test.ts`
 Expected: FAIL — `Failed to resolve import "./targetValidation"`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Créer `src/features/tasks/targetValidation.ts` :
 
@@ -453,12 +492,12 @@ export function parseTargetMinutes(hours: string, mins: string): number {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `rtk npx vitest run src/features/tasks/targetValidation.test.ts`
 Expected: PASS, 13 tests.
 
-- [ ] **Step 5: Brancher `ProjectModal` sur le module**
+- [x] **Step 5: Brancher `ProjectModal` sur le module**
 
 Dans `src/features/tasks/ProjectModal.tsx`, supprimer les lignes 7 à 11 (la constante `MAX_MINUTES` et la fonction `isValidTarget`) et ajouter à la suite des imports existants :
 
@@ -474,12 +513,12 @@ Puis remplacer le calcul de `totalMinutes` dans `ProjectRow` :
 
 `MAX_MINUTES` reste importé : la tâche 4 l'utilise pour le message d'erreur.
 
-- [ ] **Step 6: Vérifier**
+- [x] **Step 6: Vérifier**
 
 Run: `rtk npx tsc -b && rtk npm test`
 Expected: aucune erreur de type, 105 tests au vert (92 + 13).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 rtk git add src/features/tasks/targetValidation.ts src/features/tasks/targetValidation.test.ts src/features/tasks/ProjectModal.tsx && rtk git commit -m "refactor: extract target validation into a tested module"
@@ -500,7 +539,7 @@ Aujourd'hui, saisir 25 h pour une cible quotidienne rend le bouton Enregistrer i
 - Consumes: `MAX_MINUTES` et `isValidTarget` de `./targetValidation` (tâche 3)
 - Produces: rien
 
-- [ ] **Step 1: Ajouter la clé i18n**
+- [x] **Step 1: Ajouter la clé i18n**
 
 Dans `src/i18n/fr.json`, dans l'objet `goals` existant :
 
@@ -514,7 +553,7 @@ Dans `src/i18n/en.json`, dans l'objet `goals` existant :
 "targetTooLarge": "At most {{max}} for this cadence.",
 ```
 
-- [ ] **Step 2: Afficher le message sous les champs**
+- [x] **Step 2: Afficher le message sous les champs**
 
 Dans `src/features/tasks/ProjectModal.tsx`, importer le formateur à la suite des imports existants :
 
@@ -534,7 +573,7 @@ Puis, dans le rendu du mode édition, juste après le bloc `<div className="pm-r
 
 Le message n'apparaît que lorsque la saisie est réellement hors bornes — `targetValid` est vrai quand le total vaut zéro, cas qui signifie « aucune cible » et non une erreur.
 
-- [ ] **Step 3: Styler le message**
+- [x] **Step 3: Styler le message**
 
 Ajouter à la fin de `src/features/tasks/ProjectModal.css` :
 
@@ -546,18 +585,18 @@ Ajouter à la fin de `src/features/tasks/ProjectModal.css` :
 }
 ```
 
-- [ ] **Step 4: Vérifier**
+- [x] **Step 4: Vérifier**
 
 Run: `rtk npx tsc -b && rtk npm test`
 Expected: aucune erreur de type, 105 tests au vert.
 
-- [ ] **Step 5: Vérifier à l'écran**
+- [ ] **Step 5: Vérifier à l'écran** (non exécuté : même obstacle de serveur de dev)
 
 Run: `rtk npm run dev`
 
 Éditer un projet, choisir la cadence Jour, saisir 25 h : le message « Maximum 24 h pour cette cadence. » apparaît et Enregistrer est inerte. Ramener à 2 h : le message disparaît, Enregistrer redevient actif. Basculer sur Semaine avec 25 h : la cible est acceptée. Arrêter le serveur.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 rtk git add src/features/tasks/ProjectModal.tsx src/features/tasks/ProjectModal.css src/i18n/fr.json src/i18n/en.json && rtk git commit -m "feat: explain why an out-of-range target blocks saving"
@@ -578,7 +617,7 @@ rtk git add src/features/tasks/ProjectModal.tsx src/features/tasks/ProjectModal.
 - Consumes: `useProjectProgress(uid)` (existant)
 - Produces: `useProjectProgress(uid): { projects: Project[]; byProject: Record<string, ProjectProgress>; allocation: Allocation; loading: boolean }`
 
-- [ ] **Step 1: Exposer `projects` depuis le hook**
+- [x] **Step 1: Exposer `projects` depuis le hook**
 
 Dans `src/hooks/useProjectProgress.ts`, ajouter l'import de type s'il n'y est pas déjà :
 
@@ -603,7 +642,7 @@ et l'instruction de retour finale :
   return { projects, byProject, allocation, loading: projectsLoading || sessionsLoading }
 ```
 
-- [ ] **Step 2: Consommer `projects` depuis le hook dans la section Objectifs**
+- [x] **Step 2: Consommer `projects` depuis le hook dans la section Objectifs**
 
 Dans `src/features/goals/TimeTargetsSection.tsx`, supprimer la ligne d'import `useProjects` et la ligne `const { projects } = useProjects(uid)`, puis remplacer la destructuration restante :
 
@@ -611,7 +650,7 @@ Dans `src/features/goals/TimeTargetsSection.tsx`, supprimer la ligne d'import `u
   const { projects, byProject, allocation, loading } = useProjectProgress(uid)
 ```
 
-- [ ] **Step 3: Faire de même dans Stats**
+- [x] **Step 3: Faire de même dans Stats**
 
 Dans `src/features/stats/StatsScreen.tsx`, supprimer la ligne d'import `useProjects` et la ligne `const { projects } = useProjects(uid)`, puis remplacer :
 
@@ -621,18 +660,18 @@ Dans `src/features/stats/StatsScreen.tsx`, supprimer la ligne d'import `useProje
 
 Attention : si `useProjects` sert encore à autre chose dans ce fichier, garder l'import et ne retirer que l'appel redondant. Vérifier avant de supprimer.
 
-- [ ] **Step 4: Vérifier**
+- [x] **Step 4: Vérifier**
 
 Run: `rtk npx tsc -b && rtk npm test`
 Expected: aucune erreur de type — `noUnusedLocals` est activé, donc un import laissé orphelin fera échouer le build. 105 tests au vert.
 
-- [ ] **Step 5: Vérifier à l'écran**
+- [x] **Step 5: Vérifier à l'écran**
 
 Run: `rtk npm run dev`
 
 Les écrans Objectifs et Stats affichent les mêmes lignes qu'avant, avec les mêmes valeurs. Arrêter le serveur.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 rtk git add src/hooks/useProjectProgress.ts src/features/goals/TimeTargetsSection.tsx src/features/stats/StatsScreen.tsx && rtk git commit -m "refactor: source projects from useProjectProgress only"
@@ -652,7 +691,7 @@ rtk git add src/hooks/useProjectProgress.ts src/features/goals/TimeTargetsSectio
 - Consumes: rien de nouveau
 - Produces: `computeAllocation` garde sa signature ; seul `isOverAllocated` change de comportement aux marges
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Ajouter dans le bloc `describe('computeAllocation', …)` de `src/features/goals/progress.test.ts` :
 
@@ -670,12 +709,12 @@ Ajouter dans le bloc `describe('computeAllocation', …)` de `src/features/goals
 
 Le total affiché reste arrondi à 180 — c'est voulu, l'affichage n'a pas à montrer des décimales — mais la comparaison, elle, doit voir le dépassement.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `rtk npx vitest run src/features/goals/progress.test.ts -t "inférieur à la minute"`
 Expected: FAIL — `expected false to be true`, parce que `Math.round(180.43)` vaut `180` et que `180 > 180` est faux.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Dans `src/features/goals/progress.ts`, remplacer le corps de `computeAllocation` :
 
@@ -695,12 +734,12 @@ export function computeAllocation(projects: Project[], globalPerDay: number): Al
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `rtk npm test`
 Expected: PASS, 106 tests au vert (105 + 1). Les cas existants « ne signale rien quand le total égale exactement l'objectif global » et « ne signale rien quand l'objectif global vaut 0 » doivent rester verts.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 rtk git add src/features/goals/progress.ts src/features/goals/progress.test.ts && rtk git commit -m "fix: compare allocation before rounding for display"
@@ -712,22 +751,22 @@ rtk git add src/features/goals/progress.ts src/features/goals/progress.test.ts &
 
 **Files:** aucun (vérification)
 
-- [ ] **Step 1: Suite complète**
+- [x] **Step 1: Suite complète**
 
 Run: `rtk npm test`
 Expected: 106 tests au vert, sortie sans avertissement.
 
-- [ ] **Step 2: Build de production**
+- [x] **Step 2: Build de production**
 
 Run: `rtk npm run build`
 Expected: build réussi, aucune erreur TypeScript.
 
-- [ ] **Step 3: Vérifier qu'aucun appelant ne reste sur l'ancien état local**
+- [x] **Step 3: Vérifier qu'aucun appelant ne reste sur l'ancien état local**
 
 Run: `rtk grep -rn "useState" src/hooks/useTimerSettings.ts`
 Expected: aucun résultat — le hook ne détient plus d'état propre.
 
-- [ ] **Step 4: Parcours manuel**
+- [x] **Step 4: Parcours manuel**
 
 Run: `rtk npm run dev`
 
@@ -738,7 +777,7 @@ Run: `rtk npm run dev`
 
 Arrêter le serveur.
 
-- [ ] **Step 5: Commit final si des correctifs ont été nécessaires**
+- [x] **Step 5: Commit final si des correctifs ont été nécessaires**
 
 ```bash
 rtk git add -A && rtk git commit -m "fix: address issues found during final verification"

@@ -1,6 +1,8 @@
-import { useCallback, useState, useRef } from 'react'
+import { useCallback, useMemo, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
+import { useTasks } from '@/hooks/useTasks'
+import { useProjects } from '@/hooks/useProjects'
 import { useTimer } from '@/hooks/useTimer'
 import { useTimerSettings } from '@/hooks/useTimerSettings'
 import { useDailyGoal } from '@/hooks/useDailyGoal'
@@ -11,6 +13,7 @@ import { TimerControls } from './TimerControls'
 import { SessionEndScreen } from './SessionEndScreen'
 import { BreakRitualScreen } from './BreakRitualScreen'
 import { GoalBar } from './GoalBar'
+import { TaskPicker } from './TaskPicker'
 import { pickRitual } from './breakRituals'
 import './TimerScreen.css'
 
@@ -26,8 +29,26 @@ export function TimerScreen({ isDesktop }: TimerScreenProps) {
   const { targetMinutes } = useDailyGoal(uid)
   const { recordSession, totalFocusMinutes } = useTodaySessions(uid)
 
+  const { tasks, updateTask } = useTasks(uid, 'all')
+  const { projects } = useProjects(uid)
+  const activeTasks = useMemo(() => tasks.filter((t) => !t.completed), [tasks])
+  const projectColors = useMemo(
+    () => Object.fromEntries(projects.map((p) => [p.id, p.color])),
+    [projects],
+  )
+
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const selectedTask = activeTasks.find((t) => t.id === selectedTaskId) ?? null
+
   const onFocusComplete = useCallback(
-    (ms: number) => { recordSession('inbox', ms) },
+    async (ms: number) => {
+      const pid = selectedTask?.projectId ?? 'inbox'
+      await recordSession(pid, ms, selectedTaskId ?? undefined)
+      // Accumulate spent time on the task
+      if (selectedTask && uid) {
+        await updateTask(selectedTask.id, { spentMs: (selectedTask.spentMs ?? 0) + ms })
+      }
+    },
     [recordSession],
   )
 
@@ -51,6 +72,13 @@ export function TimerScreen({ isDesktop }: TimerScreenProps) {
     setShowRitual(false)
   }, [])
 
+  const handleCompleteTask = useCallback(async () => {
+    if (selectedTask) {
+      await updateTask(selectedTask.id, { completed: true, completedAt: Date.now() })
+      setSelectedTaskId(null)
+    }
+  }, [selectedTask, updateTask])
+
   const handleContinueFromBreak = useCallback(() => {
     setShowRitual(false)
     continueToNext()
@@ -71,8 +99,10 @@ export function TimerScreen({ isDesktop }: TimerScreenProps) {
       <SessionEndScreen
         type={state.type}
         accentColor={color}
+        taskTitle={selectedTask?.title}
         onContinue={handleContinueFromBreak}
         onStartBreak={state.type === 'focus' ? handleStartBreak : undefined}
+        onCompleteTask={selectedTask ? handleCompleteTask : undefined}
       />
     )
   }
@@ -102,6 +132,11 @@ export function TimerScreen({ isDesktop }: TimerScreenProps) {
         <div className="timer-screen__mode" style={{ color }}>
           {modeLabel}
         </div>
+        {selectedTask && state.type === 'focus' && (
+          <div className="timer-screen__task-label" style={{ color }}>
+            {selectedTask.title}
+          </div>
+        )}
 
         <TimerRing
           remaining={remaining}
@@ -127,6 +162,12 @@ export function TimerScreen({ isDesktop }: TimerScreenProps) {
           onSkip={skip}
         />
 
+        <TaskPicker
+            tasks={activeTasks}
+            projectColors={projectColors}
+            selectedId={selectedTaskId}
+            onSelect={setSelectedTaskId}
+          />
         <GoalBar
           totalMinutes={totalFocusMinutes}
           targetMinutes={targetMinutes}

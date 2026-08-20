@@ -49,7 +49,9 @@
     "todayGoal": "Today's goal",
     "remainingToday": "{{minutes}} min remaining today, all projects",
     "goalsReached": "Today's goals reached ✓",
-    "walking": "walking"
+    "walking": "walking",
+    "noTask": "No task",
+    "completeTask": "Mark \"{{title}}\" as done"
   },
   "tasks": {
     "empty": "No tasks yet.",
@@ -57,17 +59,36 @@
     "completed": "Completed ({{count}})",
     "viewList": "List",
     "viewMatrix": "Matrix",
-    "chooseProject": "Choose project"
+    "chooseProject": "Choose project",
+    "editTask": "Edit task",
+    "newTask": "New task",
+    "fieldTitle": "Title",
+    "fieldProject": "Project",
+    "fieldQuadrant": "Quadrant",
+    "fieldDueDate": "Due date",
+    "fieldSubtasks": "Subtasks",
+    "subtaskPlaceholder": "Add a subtask…",
+    "timeSpent": "{{minutes}} min of focus recorded",
+    "fieldNotes": "Notes",
+    "notesPlaceholder": "Add notes…"
   },
   "matrix": {
-    "q1Label": "Do",
-    "q1Sub": "Urgent + Important",
-    "q2Label": "Plan",
-    "q2Sub": "Important, not urgent",
-    "q3Label": "Delegate",
-    "q3Sub": "Urgent, not important",
-    "q4Label": "Eliminate",
-    "q4Sub": "Neither urgent nor important"
+    "q1": {
+      "label": "Do",
+      "sublabel": "Urgent + Important"
+    },
+    "q2": {
+      "label": "Schedule",
+      "sublabel": "Important, not urgent"
+    },
+    "q3": {
+      "label": "Delegate",
+      "sublabel": "Urgent, not important"
+    },
+    "q4": {
+      "label": "Eliminate",
+      "sublabel": "Not urgent or important"
+    }
   },
   "stats": {
     "weekFocus": "Focus this week",
@@ -114,6 +135,7 @@
     "edit": "Edit",
     "add": "Add",
     "close": "Close",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "clear": "Clear"
   }
 }

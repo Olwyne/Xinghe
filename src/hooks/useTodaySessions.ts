@@ -44,9 +44,10 @@ export function useTodaySessions(uid: string | null) {
     return unsub
   }, [uid])
 
-  const recordSession = useCallback(async (projectId: string, durationMs: number) => {
+  const recordSession = useCallback(async (projectId: string, durationMs: number, taskId?: string) => {
     const session: Omit<Session, 'id'> = {
       projectId,
+      taskId: taskId ?? null,
       startedAt: Date.now(),
       durationMs,
       type: 'focus',

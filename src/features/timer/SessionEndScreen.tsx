@@ -5,11 +5,20 @@ import './SessionEndScreen.css'
 interface SessionEndScreenProps {
   type: SessionType
   accentColor: string
+  taskTitle?: string | null
   onContinue: () => void
   onStartBreak?: () => void
+  onCompleteTask?: () => void
 }
 
-export function SessionEndScreen({ type, accentColor, onContinue, onStartBreak }: SessionEndScreenProps) {
+export function SessionEndScreen({
+  type,
+  accentColor,
+  taskTitle,
+  onContinue,
+  onStartBreak,
+  onCompleteTask,
+}: SessionEndScreenProps) {
   const { t } = useTranslation()
   const isFocus = type === 'focus'
   const handleClick = isFocus && onStartBreak ? onStartBreak : onContinue
@@ -23,6 +32,14 @@ export function SessionEndScreen({ type, accentColor, onContinue, onStartBreak }
       <div className="session-end__message">
         {isFocus ? t('timer.sessionEndMessage') : t('timer.breakEndMessage')}
       </div>
+      {isFocus && taskTitle && onCompleteTask && (
+        <button
+          className="session-end__complete-task"
+          onClick={onCompleteTask}
+        >
+          {t('timer.completeTask', { title: taskTitle })}
+        </button>
+      )}
       <button
         className="session-end__button"
         style={{ background: accentColor }}

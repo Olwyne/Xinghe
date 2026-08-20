@@ -66,3 +66,19 @@
     padding: var(--xh-sp-12) var(--xh-sp-12);
   }
 }
+
+.tasks-screen__new {
+  padding: var(--xh-sp-3) var(--xh-sp-6);
+  background: var(--xh-card);
+  border: 1px solid var(--xh-card-border);
+  border-radius: var(--xh-r-md);
+  color: var(--xh-text);
+  font-size: var(--xh-text-sm);
+  font-family: var(--xh-font-ui);
+  cursor: pointer;
+  transition: background var(--xh-transition);
+}
+
+.tasks-screen__new:hover {
+  background: var(--xh-card-hover);
+}

@@ -84,3 +84,10 @@
     opacity: 0.5;
   }
 }
+
+.task-item__sub-count {
+  margin-left: var(--xh-sp-3);
+  font-size: var(--xh-text-xs);
+  color: var(--xh-text-faint);
+  font-variant-numeric: tabular-nums;
+}

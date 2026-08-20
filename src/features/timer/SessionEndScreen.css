@@ -34,3 +34,19 @@
   font-weight: 700;
   font-size: var(--xh-text-lg);
 }
+
+.session-end__complete-task {
+  background: transparent;
+  border: 1px solid var(--xh-card-border);
+  border-radius: var(--xh-r-md);
+  color: var(--xh-text);
+  font-size: var(--xh-text-sm);
+  font-family: var(--xh-font-ui);
+  padding: var(--xh-sp-4) var(--xh-sp-6);
+  cursor: pointer;
+  transition: border-color var(--xh-transition);
+}
+
+.session-end__complete-task:hover {
+  border-color: var(--xh-card-border-strong);
+}

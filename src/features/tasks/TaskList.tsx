@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { Task } from './types'
+
 import { TaskItem } from './TaskItem'
 import './TaskList.css'
 
@@ -9,9 +10,10 @@ interface TaskListProps {
   fallbackColor: string
   onToggle: (id: string) => void
   onDelete: (id: string) => void
+  onOpen?: (task: Task) => void
 }
 
-export function TaskList({ tasks, projectColors, fallbackColor, onToggle, onDelete }: TaskListProps) {
+export function TaskList({ tasks, projectColors, fallbackColor, onToggle, onDelete, onOpen }: TaskListProps) {
   const { t } = useTranslation()
 
   const active = tasks.filter((t) => !t.completed)
@@ -34,6 +36,7 @@ export function TaskList({ tasks, projectColors, fallbackColor, onToggle, onDele
           projectColor={projectColors[task.projectId] ?? fallbackColor}
           onToggle={onToggle}
           onDelete={onDelete}
+          onOpen={onOpen}
         />
       ))}
       {done.length > 0 && (
@@ -48,6 +51,7 @@ export function TaskList({ tasks, projectColors, fallbackColor, onToggle, onDele
               projectColor={projectColors[task.projectId] ?? fallbackColor}
               onToggle={onToggle}
               onDelete={onDelete}
+              onOpen={onOpen}
             />
           ))}
         </>

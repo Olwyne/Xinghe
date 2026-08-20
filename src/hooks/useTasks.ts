@@ -59,34 +59,34 @@ export function useTasks(uid: string | null, projectId: string) {
   }, [projectId])
 
   const addTask = useCallback(
-    async (title: string, targetProjectId?: string) => {
+    async (
+      title: string,
+      targetProjectId?: string,
+      quadrant: Quadrant = 2,
+      dueDate?: number | null,
+      subtasks?: Task['subtasks'],
+    ) => {
       const pid = targetProjectId ?? projectId
       const now = Date.now()
       const order = tasks.length
+      const base = {
+        title,
+        projectId: pid,
+        quadrant,
+        completed: false,
+        completedAt: null,
+        createdAt: now,
+        order,
+        notes: '',
+        dueDate: dueDate ?? null,
+        subtasks: subtasks ?? [],
+        spentMs: 0,
+      }
 
       if (isFirebaseConfigured && uid && db) {
-        await addDoc(colRef(uid), {
-          title,
-          projectId: pid,
-          quadrant: 2 as Quadrant,
-          completed: false,
-          completedAt: null,
-          createdAt: now,
-          order,
-          notes: '',
-        })
+        await addDoc(colRef(uid), base)
       } else {
-        const t: Task = {
-          id: crypto.randomUUID(),
-          title,
-          projectId: pid,
-          quadrant: 2,
-          completed: false,
-          completedAt: null,
-          createdAt: now,
-          order,
-          notes: '',
-        }
+        const t: Task = { id: crypto.randomUUID(), ...base }
         persist((all) => [...all, t])
       }
     },

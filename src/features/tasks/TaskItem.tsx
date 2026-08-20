@@ -7,9 +7,10 @@ interface TaskItemProps {
   projectColor: string
   onToggle: (id: string) => void
   onDelete: (id: string) => void
+  onOpen?: (task: Task) => void
 }
 
-export function TaskItem({ task, projectColor, onToggle, onDelete }: TaskItemProps) {
+export function TaskItem({ task, projectColor, onToggle, onDelete, onOpen }: TaskItemProps) {
   const [removing, setRemoving] = useState(false)
 
   function handleDelete() {
@@ -31,7 +32,18 @@ export function TaskItem({ task, projectColor, onToggle, onDelete }: TaskItemPro
           </svg>
         )}
       </button>
-      <span className="task-item__title">{task.title}</span>
+      <span
+        className="task-item__title"
+        onClick={() => onOpen?.(task)}
+        style={{ cursor: onOpen ? 'pointer' : 'default' }}
+      >
+        {task.title}
+        {!!task.subtasks?.length && (
+          <span className="task-item__sub-count">
+            {task.subtasks.filter((s) => s.done).length}/{task.subtasks.length}
+          </span>
+        )}
+      </span>
       <button
         className="task-item__delete"
         onClick={handleDelete}

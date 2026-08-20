@@ -111,6 +111,8 @@ export interface TargetRow {
   spentMinutes: number
   targetMinutes: number
   ratio: number
+  /** Non borné, identique à ProjectProgress.rawRatio — pour afficher le pourcentage réel. */
+  rawRatio: number
   isExceeded: boolean
   periodKey: 'thisDay' | 'thisWeek' | 'thisMonth'
 }
@@ -132,6 +134,7 @@ export function buildTargetRows(
       spentMinutes: progress.spentMinutes,
       targetMinutes: progress.targetMinutes,
       ratio: progress.ratio,
+      rawRatio: progress.rawRatio,
       isExceeded: progress.rawRatio > 1,
       periodKey: PERIOD_LABEL_KEY[p.timeTarget.period],
     })

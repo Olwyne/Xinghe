@@ -197,6 +197,25 @@ describe('buildTargetRows', () => {
 
   it('préserve l’ordre des projets', () => {
     const byProject = aggregateByProject(projects, [], 4, NOW)
-    expect(buildTargetRows(projects, byProject)[0].projectId).toBe('thesis')
+    expect(buildTargetRows(projects, byProject).map((r) => r.projectId)).toEqual([
+      'thesis',
+      'sport',
+    ])
+  })
+
+  it('traduit la cadence mensuelle en clé de libellé de fenêtre', () => {
+    const monthlyProjects = [project('reading', { period: 'month', targetMinutes: 600 })]
+    const byProject = aggregateByProject(monthlyProjects, [], 4, NOW)
+    const rows = buildTargetRows(monthlyProjects, byProject)
+    expect(rows[0]?.periodKey).toBe('thisMonth')
+  })
+
+  it('expose rawRatio non borné sur la ligne, distinct de ratio borné à 1', () => {
+    const sessions = [session('sport', at(2026, 3, 10, 8), 60)] // cible 30, donc 200%
+    const byProject = aggregateByProject(projects, sessions, 4, NOW)
+    const rows = buildTargetRows(projects, byProject)
+    const sportRow = rows.find((r) => r.projectId === 'sport')
+    expect(sportRow?.ratio).toBe(1)
+    expect(sportRow?.rawRatio).toBe(2)
   })
 })

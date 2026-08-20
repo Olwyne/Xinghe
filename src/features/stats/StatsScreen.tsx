@@ -25,7 +25,7 @@ export function StatsScreen() {
   const { totalMinutes, byDay } = useWeekSessions(uid)
   const { targetMinutes } = useDailyGoal(uid)
   const { projects } = useProjects(uid)
-  const { byProject } = useProjectProgress(uid)
+  const { byProject, loading: progressLoading } = useProjectProgress(uid)
   const targetRows = buildTargetRows(projects, byProject)
   const { habits } = useHabits(uid)
   const { isCompletedToday, streakFor } = useHabitEntries(uid)
@@ -62,7 +62,12 @@ export function StatsScreen() {
           <span className="stats-card__label">{t('stats.projectTargets')}</span>
         </div>
 
-        {targetRows.length === 0 ? (
+        {progressLoading ? (
+          <div className="stats-targets__skeletons">
+            <div className="stats-targets__skeleton" />
+            <div className="stats-targets__skeleton" />
+          </div>
+        ) : targetRows.length === 0 ? (
           <p className="stats-card__empty">{t('stats.noProjectTargets')}</p>
         ) : (
           <ul className="stats-targets">
@@ -76,7 +81,7 @@ export function StatsScreen() {
                   />
                 </div>
                 <span className="stats-target__pct">
-                  {Math.round((row.spentMinutes / row.targetMinutes) * 100)}%
+                  {Math.round(row.rawRatio * 100)}%
                 </span>
               </li>
             ))}

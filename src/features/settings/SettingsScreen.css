@@ -1,0 +1,225 @@
+.settings-screen {
+  padding: 28px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xh-sp-8);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.settings-screen__title {
+  font-family: var(--xh-font-display);
+  font-size: var(--xh-text-2xl);
+  color: var(--xh-text);
+}
+
+/* Sections */
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.settings-section__label {
+  font-size: var(--xh-text-xs);
+  font-weight: 700;
+  color: var(--xh-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--xh-sp-4);
+}
+
+/* Duration cards */
+
+.settings-durations {
+  display: flex;
+  gap: var(--xh-sp-3);
+}
+
+.settings-duration-card {
+  flex: 1;
+  background: var(--xh-card);
+  border: 1px solid var(--xh-card-border);
+  border-radius: var(--xh-r-lg);
+  padding: var(--xh-sp-4) var(--xh-sp-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xh-sp-1);
+}
+
+.settings-duration-card__label {
+  font-size: var(--xh-text-xs);
+  color: var(--xh-text-faint);
+  text-align: center;
+}
+
+.settings-duration-card__input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--xh-text);
+  font-size: var(--xh-text-xl);
+  font-family: var(--xh-font-mono, var(--xh-font-ui));
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.settings-duration-card__input::-webkit-inner-spin-button,
+.settings-duration-card__input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+.settings-duration-card__unit {
+  font-size: var(--xh-text-xs);
+  color: var(--xh-text-faint);
+}
+
+/* Rows */
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--xh-sp-4) 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-row:first-of-type {
+  border-top: none;
+}
+
+.settings-row__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-row__title {
+  font-size: var(--xh-text-sm);
+  color: var(--xh-text);
+}
+
+.settings-row__sub {
+  font-size: var(--xh-text-xs);
+  color: var(--xh-text-faint);
+}
+
+/* Number input for cycles */
+
+.settings-number-input {
+  width: 48px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--xh-card-border);
+  border-radius: var(--xh-r-md);
+  padding: 6px 0;
+  color: var(--xh-text);
+  font-size: var(--xh-text-sm);
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.settings-number-input::-webkit-inner-spin-button,
+.settings-number-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+/* Toggle */
+
+.settings-toggle {
+  width: 40px;
+  height: 24px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background var(--xh-transition);
+  padding: 0;
+}
+
+.settings-toggle--on {
+  background: var(--xh-short);
+}
+
+.settings-toggle__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left var(--xh-transition);
+}
+
+.settings-toggle--on .settings-toggle__knob {
+  left: 19px;
+}
+
+/* Stepper */
+
+.settings-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--xh-sp-3);
+}
+
+.settings-stepper__btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--xh-card-border);
+  background: transparent;
+  color: var(--xh-text-sub);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--xh-transition);
+}
+
+.settings-stepper__btn:hover {
+  background: var(--xh-card);
+}
+
+.settings-stepper__value {
+  font-size: var(--xh-text-sm);
+  color: var(--xh-text-sub);
+  min-width: 40px;
+  text-align: center;
+}
+
+/* Account */
+
+.settings-section--account {
+  margin-top: auto;
+}
+
+.settings-logout {
+  padding: 10px 20px;
+  border-radius: var(--xh-r-lg);
+  border: 1px solid var(--xh-card-border);
+  background: transparent;
+  color: var(--xh-text-sub);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: var(--xh-text-sm);
+  transition: background var(--xh-transition);
+}
+
+.settings-logout:hover {
+  background: var(--xh-card);
+}
+
+@media (min-width: 768px) {
+  .settings-screen {
+    max-width: 480px;
+    padding: 26px 32px 40px;
+  }
+}

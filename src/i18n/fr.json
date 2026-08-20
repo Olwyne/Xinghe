@@ -87,6 +87,19 @@
     "newPlaceholder": "Nouveau projet…",
     "create": "Créer"
   },
+  "settings": {
+    "title": "Réglages",
+    "durations": "Durées",
+    "sequence": "Séquence",
+    "system": "Système",
+    "cyclesBeforeLong": "Pauses courtes avant la pause longue",
+    "cyclesBeforeLongHint": "Ex. 4 = pause longue après la 4ᵉ pause courte",
+    "autoChain": "Enchaînement automatique",
+    "keepAwake": "Empêcher la mise en veille",
+    "keepAwakeHint": "Maintient l'écran allumé pendant le focus",
+    "dayStart": "Début de journée",
+    "dayStartHint": "Les sessions avant cette heure comptent pour la veille"
+  },
   "connectivity": {
     "offline": "Hors ligne",
     "syncing": "Synchronisation…",

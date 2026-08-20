@@ -87,6 +87,19 @@
     "newPlaceholder": "New project…",
     "create": "Create"
   },
+  "settings": {
+    "title": "Settings",
+    "durations": "Durations",
+    "sequence": "Sequence",
+    "system": "System",
+    "cyclesBeforeLong": "Short breaks before a long break",
+    "cyclesBeforeLongHint": "e.g. 4 = long break after every 4th short break",
+    "autoChain": "Auto-chain sessions",
+    "keepAwake": "Keep screen awake",
+    "keepAwakeHint": "Prevents screen sleep during focus sessions",
+    "dayStart": "Day boundary",
+    "dayStartHint": "Sessions before this hour count toward the previous day"
+  },
   "connectivity": {
     "offline": "Offline",
     "syncing": "Syncing…",

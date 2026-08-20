@@ -1,49 +1,15 @@
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { AuthGuard } from '@/features/auth/AuthGuard'
 import { Layout } from '@/components/Layout'
 import type { NavTab } from '@/components/BottomNav'
 import type { DesktopTab } from '@/components/Sidebar'
-import { useAuth } from '@/hooks/useAuth'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
 import { TimerScreen } from '@/features/timer/TimerScreen'
 import { TasksScreen } from '@/features/tasks/TasksScreen'
 import { MatrixScreen } from '@/features/matrix/MatrixScreen'
 import { HabitsScreen } from '@/features/habits/HabitsScreen'
 import { StatsScreen } from '@/features/stats/StatsScreen'
-
-function SettingsScreen({ isDesktop }: { isDesktop: boolean }) {
-  const { t } = useTranslation()
-  const { logout } = useAuth()
-  return (
-    <div style={{ padding: '28px 24px' }}>
-      <div
-        style={{
-          fontFamily: 'var(--xh-font-display)',
-          fontSize: 'var(--xh-text-2xl)',
-          color: 'var(--xh-text)',
-          marginBottom: 18,
-        }}
-      >
-        {isDesktop ? 'Réglages' : t('nav.profile')}
-      </div>
-      <button
-        onClick={logout}
-        style={{
-          padding: '10px 20px',
-          borderRadius: 'var(--xh-r-lg)',
-          border: '1px solid var(--xh-card-border)',
-          background: 'transparent',
-          color: 'var(--xh-text-sub)',
-          fontWeight: 600,
-          cursor: 'pointer',
-        }}
-      >
-        {t('auth.logout')}
-      </button>
-    </div>
-  )
-}
+import { SettingsScreen } from '@/features/settings/SettingsScreen'
 
 function AppShell() {
   const desktop = useIsDesktop()

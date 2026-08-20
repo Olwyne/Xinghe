@@ -16,6 +16,8 @@ export interface TimerSettings {
   longMinutes: number
   cyclesBeforeLong: number
   autoChain: boolean
+  keepAwake: boolean
+  dayStart: number
 }
 
 export const DEFAULT_SETTINGS: TimerSettings = {
@@ -24,6 +26,8 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   longMinutes: 15,
   cyclesBeforeLong: 4,
   autoChain: true,
+  keepAwake: true,
+  dayStart: 4,
 }
 
 export function durationMs(type: SessionType, settings: TimerSettings): number {

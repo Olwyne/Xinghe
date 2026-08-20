@@ -1,0 +1,107 @@
+.tts {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tts__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.tts__warning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(232, 201, 122, 0.12);
+  border: 1px solid rgba(232, 201, 122, 0.3);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.tts__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tts__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.tts__icon {
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.tts__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tts__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.tts__name {
+  font-size: 0.9rem;
+}
+
+.tts__value {
+  font-size: 0.8rem;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.tts__value--exceeded {
+  color: var(--xh-focus);
+  opacity: 1;
+}
+
+.tts__track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.tts__fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 240ms ease;
+}
+
+.tts__period {
+  font-size: 0.7rem;
+  opacity: 0.55;
+}
+
+.tts__empty {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+.tts__skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tts__skeleton {
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}

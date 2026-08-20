@@ -96,3 +96,45 @@ export function widestRangeStart(
   }
   return earliest
 }
+
+const PERIOD_LABEL_KEY: Record<TargetPeriod, 'thisDay' | 'thisWeek' | 'thisMonth'> = {
+  day: 'thisDay',
+  week: 'thisWeek',
+  month: 'thisMonth',
+}
+
+export interface TargetRow {
+  projectId: string
+  name: string
+  color: string
+  icon: string
+  spentMinutes: number
+  targetMinutes: number
+  ratio: number
+  isExceeded: boolean
+  periodKey: 'thisDay' | 'thisWeek' | 'thisMonth'
+}
+
+/** Vue prête à afficher : un projet ayant une cible = une ligne. */
+export function buildTargetRows(
+  projects: Project[],
+  byProject: Record<string, ProjectProgress>,
+): TargetRow[] {
+  const rows: TargetRow[] = []
+  for (const p of projects) {
+    const progress = byProject[p.id]
+    if (!p.timeTarget || !progress) continue
+    rows.push({
+      projectId: p.id,
+      name: p.name,
+      color: p.color,
+      icon: p.icon,
+      spentMinutes: progress.spentMinutes,
+      targetMinutes: progress.targetMinutes,
+      ratio: progress.ratio,
+      isExceeded: progress.rawRatio > 1,
+      periodKey: PERIOD_LABEL_KEY[p.timeTarget.period],
+    })
+  }
+  return rows
+}

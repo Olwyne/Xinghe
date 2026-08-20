@@ -6,6 +6,7 @@ import {
   computeAllocation,
   aggregateByProject,
   widestRangeStart,
+  buildTargetRows,
 } from './progress'
 
 function at(y: number, m: number, d: number, h = 0): number {
@@ -154,5 +155,48 @@ describe('widestRangeStart', () => {
 
   it('retourne null quand aucun projet n’a de cible', () => {
     expect(widestRangeStart([project('a', null)], 4, NOW)).toBeNull()
+  })
+})
+
+describe('buildTargetRows', () => {
+  const projects = [
+    project('thesis', { period: 'week', targetMinutes: 360 }),
+    project('sport', { period: 'day', targetMinutes: 30 }),
+    project('noTarget', null),
+  ]
+
+  it('ne retourne que les projets ayant une cible', () => {
+    const byProject = aggregateByProject(projects, [], 4, NOW)
+    const rows = buildTargetRows(projects, byProject)
+    expect(rows.map((r) => r.projectId).sort()).toEqual(['sport', 'thesis'])
+  })
+
+  it('traduit la cadence en clé de libellé de fenêtre', () => {
+    const byProject = aggregateByProject(projects, [], 4, NOW)
+    const rows = buildTargetRows(projects, byProject)
+    expect(rows.find((r) => r.projectId === 'thesis')?.periodKey).toBe('thisWeek')
+    expect(rows.find((r) => r.projectId === 'sport')?.periodKey).toBe('thisDay')
+  })
+
+  it('marque le dépassement de cible', () => {
+    const sessions = [session('sport', at(2026, 3, 10, 8), 45)] // cible 30
+    const byProject = aggregateByProject(projects, sessions, 4, NOW)
+    const rows = buildTargetRows(projects, byProject)
+    const sportRow = rows.find((r) => r.projectId === 'sport')
+    expect(sportRow?.isExceeded).toBe(true)
+    expect(sportRow?.ratio).toBe(1)
+    expect(sportRow?.spentMinutes).toBe(45)
+  })
+
+  it('ne marque pas de dépassement quand la cible est juste atteinte', () => {
+    const sessions = [session('sport', at(2026, 3, 10, 8), 30)]
+    const byProject = aggregateByProject(projects, sessions, 4, NOW)
+    const rows = buildTargetRows(projects, byProject)
+    expect(rows.find((r) => r.projectId === 'sport')?.isExceeded).toBe(false)
+  })
+
+  it('préserve l’ordre des projets', () => {
+    const byProject = aggregateByProject(projects, [], 4, NOW)
+    expect(buildTargetRows(projects, byProject)[0].projectId).toBe('thesis')
   })
 })

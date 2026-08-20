@@ -111,7 +111,10 @@ export function useProjects(uid: string | null) {
   )
 
   const updateProject = useCallback(
-    async (id: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon'>>) => {
+    async (
+      id: string,
+      updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'timeTarget'>>,
+    ) => {
       if (isFirebaseConfigured && uid && db) {
         await updateDoc(docRef(uid, id), updates)
       } else {

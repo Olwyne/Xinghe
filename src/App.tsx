@@ -7,7 +7,7 @@ import { useIsDesktop } from '@/hooks/useMediaQuery'
 import { TimerScreen } from '@/features/timer/TimerScreen'
 import { TasksScreen } from '@/features/tasks/TasksScreen'
 import { MatrixScreen } from '@/features/matrix/MatrixScreen'
-import { HabitsScreen } from '@/features/habits/HabitsScreen'
+import { GoalsScreen } from '@/features/goals/GoalsScreen'
 import { StatsScreen } from '@/features/stats/StatsScreen'
 import { SettingsScreen } from '@/features/settings/SettingsScreen'
 
@@ -32,7 +32,7 @@ function AppShell() {
         {tab === 'timer' && <TimerScreen isDesktop={desktop} />}
         {tab === 'tasks' && <TasksScreen />}
         {tab === 'matrix' && <MatrixScreen />}
-        {tab === 'goals' && <HabitsScreen />}
+        {tab === 'goals' && <GoalsScreen />}
         {tab === 'stats' && <StatsScreen />}
         {(tab === 'profile' || tab === 'settings') && <SettingsScreen isDesktop={desktop} />}
       </div>

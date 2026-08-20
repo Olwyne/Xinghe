@@ -94,7 +94,9 @@
     "weekFocus": "Focus this week",
     "weekTarget": "Target: {{target}} (Mon–Fri)",
     "todayHabits": "Today's habits",
-    "noHabits": "No habits created yet."
+    "noHabits": "No habits created yet.",
+    "projectTargets": "Targets by project",
+    "noProjectTargets": "No time target set."
   },
   "ritual": {
     "skip": "Skip ritual"
@@ -137,5 +139,18 @@
     "close": "Close",
     "loading": "Loading…",
     "clear": "Clear"
+  },
+  "goals": {
+    "timeTargets": "Time per project",
+    "setTarget": "Time target",
+    "noTarget": "No target",
+    "targetHours": "h",
+    "targetMinutes": "min",
+    "period": { "day": "Day", "week": "Week", "month": "Month" },
+    "thisDay": "today",
+    "thisWeek": "this week",
+    "thisMonth": "this month",
+    "overAllocated": "Your targets add up to {{total}} per day, above your global goal of {{global}}.",
+    "empty": "No project has a time target yet. Add one from project management."
   }
 }

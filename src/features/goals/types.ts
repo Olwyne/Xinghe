@@ -11,4 +11,6 @@ export interface Session {
   startedAt: number
   durationMs: number
   type: 'focus'
+  /** Fin réelle de la session. Absent sur les documents créés avant ce champ. */
+  endedAt?: number
 }

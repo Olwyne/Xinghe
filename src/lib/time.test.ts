@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { periodRange } from './time'
 
+// The DST test below needs a timezone that observes DST to be meaningful;
+// pin it explicitly rather than relying on the runner's ambient timezone.
+// (No @types/node in this project, so process is reached via globalThis.)
+;(globalThis as { process?: { env: Record<string, string | undefined> } }).process!.env.TZ =
+  'Europe/Paris'
+
 const HOUR = 3_600_000
 
 /** Construit un timestamp local, sans dépendre du fuseau du runner. */
@@ -65,11 +71,16 @@ describe('periodRange', () => {
     expect(r.end).toBe(at(2026, 4, 1, 4))
   })
 
-  it(`week: une semaine traversant un changement d'heure fait 7 jours à une heure près`, () => {
-    // Dernier dimanche de mars : passage à l'heure d'été dans la plupart des fuseaux européens
-    const r = periodRange('week', 4, at(2026, 3, 30, 12))
+  it(`week: une semaine traversant le passage à l'heure d'été dure exactement 167 heures`, () => {
+    // Semaine du lundi 23 mars au lundi 30 mars 2026 : le dernier dimanche de
+    // mars (29 mars) est le passage à l'heure d'été en Europe (2h -> 3h), donc
+    // cette semaine ne compte que 167 heures, pas 168. `now` est un mercredi
+    // dans cette même semaine (le 30 mars à midi serait déjà dans la semaine
+    // suivante, qui ne traverse pas le changement d'heure).
+    const r = periodRange('week', 4, at(2026, 3, 25, 12))
+    expect(r.start).toBe(at(2026, 3, 23, 4))
+    expect(r.end).toBe(at(2026, 3, 30, 4))
     const hours = (r.end - r.start) / HOUR
-    expect(hours).toBeGreaterThanOrEqual(167)
-    expect(hours).toBeLessThanOrEqual(169)
+    expect(hours).toBe(167)
   })
 })

@@ -1,4 +1,14 @@
+import type { TargetPeriod } from '@/lib/time'
+
 export type Quadrant = 1 | 2 | 3 | 4
+
+export type { TargetPeriod }
+
+export interface TimeTarget {
+  period: TargetPeriod
+  /** Minutes visées sur une période complète. 1 à 1440/10080/44640 selon la cadence. */
+  targetMinutes: number
+}
 
 export interface Project {
   id: string
@@ -8,6 +18,8 @@ export interface Project {
   createdAt: number
   order: number
   isInbox: boolean
+  /** Cible de temps du projet. Absent ou null = aucune cible. */
+  timeTarget?: TimeTarget | null
 }
 
 export interface Subtask {

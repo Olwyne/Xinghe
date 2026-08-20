@@ -427,12 +427,17 @@ et son appel initial :
   )
 ```
 
-Dans l'effet Firestore, remplacer `where('startedAt', '>=', todayStart())` par les deux bornes, et ajouter `dayStart` aux dépendances :
+**Important** : l'effet ne doit pas se contenter d'un early return quand Firebase n'est pas configuré — sinon la fenêtre locale reste figée sur le `dayStart` du premier rendu et ne se recalcule jamais quand le réglage change. L'effet doit recalculer la fenêtre *à chaque exécution* (donc à chaque changement de `dayStart`) et, dans le cas local, relancer `loadLocalSessions()` avant de sortir :
 
 ```ts
   useEffect(() => {
-    if (!isFirebaseConfigured || !uid || !db) return
     const { start, end } = periodRange('day', dayStart, Date.now())
+
+    if (!isFirebaseConfigured || !uid || !db) {
+      setSessions(loadLocalSessions(start, end))
+      return
+    }
+
     const col = collection(db, 'users', uid, 'sessions')
     const q = query(
       col,
@@ -449,25 +454,70 @@ Dans l'effet Firestore, remplacer `where('startedAt', '>=', todayStart())` par l
   }, [uid, dayStart])
 ```
 
-- [ ] **Step 2: `useWeekSessions` utilise `periodRange`**
+- [ ] **Step 2: `useWeekSessions` utilise `periodRange`, et le bucketing respecte la frontière de journée**
 
-Dans `src/hooks/useWeekSessions.ts`, supprimer `weekStart()`, ajouter les mêmes imports, et remplacer par :
+Dans `src/hooks/useWeekSessions.ts`, supprimer `weekStart()` et `dateStr()`, ajouter les mêmes imports plus `getDayBoundary` :
+
+```ts
+import { periodRange, getDayBoundary } from '@/lib/time'
+import { useTimerSettings } from '@/hooks/useTimerSettings'
+```
+
+Extraire le regroupement par jour dans une fonction pure et exportée, testable indépendamment du hook. `dateStr()` (basé sur `toISOString`, donc UTC calendaire brut) étiquetait les 7 colonnes avec des timestamps déjà décalés par `dayStart`, mais regroupait les sessions avec leur date brute — les deux calculs divergeaient. `getDayBoundary` (Task 1, déjà exporté par `src/lib/time.ts`) applique le même décalage aux deux, donc on l'utilise pour les deux :
+
+```ts
+export interface DayStat {
+  date: string
+  minutes: number
+}
+
+/**
+ * Répartit les sessions sur les 7 jours de la fenêtre, en utilisant la
+ * frontière de journée configurable pour à la fois étiqueter et regrouper —
+ * une session à 3h avec dayStart=4 appartient à la journée précédente.
+ */
+export function bucketSessionsByDay(
+  sessions: Session[],
+  rangeStart: number,
+  dayStartHour: number,
+): DayStat[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const ts = rangeStart + i * 86_400_000
+    const date = getDayBoundary(ts, dayStartHour)
+    const minutes = Math.floor(
+      sessions
+        .filter((s) => getDayBoundary(s.startedAt, dayStartHour) === date)
+        .reduce((sum, s) => sum + s.durationMs, 0) / 60_000,
+    )
+    return { date, minutes }
+  })
+}
+
+function loadLocalSessions(start: number, end: number): Session[] {
+  const all = getStore<Session[]>(LS_KEY, [])
+  return all.filter((s) => s.startedAt >= start && s.startedAt < end && s.type === 'focus')
+}
+```
+
+Puis, dans le corps du hook (même correction qu'au Step 1 : l'effet recalcule la fenêtre locale au lieu de sortir en silence) :
 
 ```ts
   const { settings } = useTimerSettings()
   const dayStart = settings.dayStart
   const range = periodRange('week', dayStart, Date.now())
 
-  const [sessions, setSessions] = useState<Session[]>(() => {
-    const all = getStore<Session[]>(LS_KEY, [])
-    return all.filter(
-      (s) => s.startedAt >= range.start && s.startedAt < range.end && s.type === 'focus',
-    )
-  })
+  const [sessions, setSessions] = useState<Session[]>(() =>
+    loadLocalSessions(range.start, range.end),
+  )
 
   useEffect(() => {
-    if (!isFirebaseConfigured || !uid || !db) return
     const { start, end } = periodRange('week', dayStart, Date.now())
+
+    if (!isFirebaseConfigured || !uid || !db) {
+      setSessions(loadLocalSessions(start, end))
+      return
+    }
+
     const col = collection(db, 'users', uid, 'sessions')
     const q = query(
       col,
@@ -480,24 +530,31 @@ Dans `src/hooks/useWeekSessions.ts`, supprimer `weekStart()`, ajouter les mêmes
     })
     return unsub
   }, [uid, dayStart])
+
+  const totalMs = sessions.reduce((s, e) => s + e.durationMs, 0)
+  const totalMinutes = Math.floor(totalMs / 60_000)
+
+  const byDay = bucketSessionsByDay(sessions, range.start, dayStart)
 ```
 
-Le calcul de `byDay` utilise `weekStart()` : remplacer les deux occurrences par `range.start`. Chaque jour du graphe est alors `range.start + i * 86_400_000`, et `dateStr()` reste inchangé.
+- [ ] **Step 3: Test `bucketSessionsByDay`**
 
-- [ ] **Step 3: Vérifier la compilation et les tests**
+Créer `src/hooks/useWeekSessions.test.ts` et pin la règle de bucketing : avec `dayStart = 4`, une session à 3h le jour D doit tomber dans le seau du jour D-1, une session à 5h le jour D doit tomber dans le seau du jour D, et une session matinale sur le dernier jour de la fenêtre ne doit pas disparaître (total conservé sur les 7 seaux).
+
+- [ ] **Step 4: Vérifier la compilation et les tests**
 
 Run: `rtk npx tsc -b && rtk npx vitest run`
-Expected: aucune erreur, tests existants au vert.
+Expected: aucune erreur, tests existants au vert (56 tests + les nouveaux de ce Task).
 
-- [ ] **Step 4: Vérifier à la main dans l'app**
+- [ ] **Step 5: Vérifier à la main dans l'app**
 
 Run: `rtk npm run dev`
-Ouvrir l'écran Stats, régler la frontière de journée dans Réglages (par ex. 4 h → 0 h) et vérifier que le total de la semaine se recalcule sans erreur console. Arrêter le serveur ensuite.
+Ouvrir l'écran Stats, régler la frontière de journée dans Réglages (par ex. 4 h → 0 h) et vérifier que le total du jour et de la semaine se recalculent sans reload, y compris hors ligne (Firebase non configuré). Arrêter le serveur ensuite.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-rtk git add src/hooks/useTodaySessions.ts src/hooks/useWeekSessions.ts && rtk git commit -m "fix: honour configurable day boundary in session hooks"
+rtk git add src/hooks/useTodaySessions.ts src/hooks/useWeekSessions.ts src/hooks/useWeekSessions.test.ts && rtk git commit -m "fix: recompute local sessions on dayStart change, bucket by day boundary"
 ```
 
 ---

@@ -3,18 +3,41 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '@/config/firebase'
 import { getStore } from '@/lib/localStore'
 import type { Session } from '@/features/goals/types'
-import { periodRange } from '@/lib/time'
+import { periodRange, getDayBoundary } from '@/lib/time'
 import { useTimerSettings } from '@/hooks/useTimerSettings'
 
 const LS_KEY = 'xinghe-sessions'
 
-function dateStr(ts: number): string {
-  return new Date(ts).toISOString().slice(0, 10)
-}
-
 export interface DayStat {
   date: string
   minutes: number
+}
+
+/**
+ * Répartit les sessions sur les 7 jours de la fenêtre, en utilisant la
+ * frontière de journée configurable pour à la fois étiqueter et regrouper —
+ * une session à 3h avec dayStart=4 appartient à la journée précédente.
+ */
+export function bucketSessionsByDay(
+  sessions: Session[],
+  rangeStart: number,
+  dayStartHour: number,
+): DayStat[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const ts = rangeStart + i * 86_400_000
+    const date = getDayBoundary(ts, dayStartHour)
+    const minutes = Math.floor(
+      sessions
+        .filter((s) => getDayBoundary(s.startedAt, dayStartHour) === date)
+        .reduce((sum, s) => sum + s.durationMs, 0) / 60_000,
+    )
+    return { date, minutes }
+  })
+}
+
+function loadLocalSessions(start: number, end: number): Session[] {
+  const all = getStore<Session[]>(LS_KEY, [])
+  return all.filter((s) => s.startedAt >= start && s.startedAt < end && s.type === 'focus')
 }
 
 export function useWeekSessions(uid: string | null) {
@@ -22,16 +45,18 @@ export function useWeekSessions(uid: string | null) {
   const dayStart = settings.dayStart
   const range = periodRange('week', dayStart, Date.now())
 
-  const [sessions, setSessions] = useState<Session[]>(() => {
-    const all = getStore<Session[]>(LS_KEY, [])
-    return all.filter(
-      (s) => s.startedAt >= range.start && s.startedAt < range.end && s.type === 'focus',
-    )
-  })
+  const [sessions, setSessions] = useState<Session[]>(() =>
+    loadLocalSessions(range.start, range.end),
+  )
 
   useEffect(() => {
-    if (!isFirebaseConfigured || !uid || !db) return
     const { start, end } = periodRange('week', dayStart, Date.now())
+
+    if (!isFirebaseConfigured || !uid || !db) {
+      setSessions(loadLocalSessions(start, end))
+      return
+    }
+
     const col = collection(db, 'users', uid, 'sessions')
     const q = query(
       col,
@@ -48,16 +73,7 @@ export function useWeekSessions(uid: string | null) {
   const totalMs = sessions.reduce((s, e) => s + e.durationMs, 0)
   const totalMinutes = Math.floor(totalMs / 60_000)
 
-  const byDay: DayStat[] = Array.from({ length: 7 }, (_, i) => {
-    const ts = range.start + i * 86_400_000
-    const date = dateStr(ts)
-    const minutes = Math.floor(
-      sessions
-        .filter((s) => dateStr(s.startedAt) === date)
-        .reduce((sum, s) => sum + s.durationMs, 0) / 60_000,
-    )
-    return { date, minutes }
-  })
+  const byDay = bucketSessionsByDay(sessions, range.start, dayStart)
 
   return { sessions, totalMinutes, byDay }
 }

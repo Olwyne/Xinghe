@@ -30,8 +30,13 @@ export function useTodaySessions(uid: string | null) {
   )
 
   useEffect(() => {
-    if (!isFirebaseConfigured || !uid || !db) return
     const { start, end } = periodRange('day', dayStart, Date.now())
+
+    if (!isFirebaseConfigured || !uid || !db) {
+      setSessions(loadLocalSessions(start, end))
+      return
+    }
+
     const col = collection(db, 'users', uid, 'sessions')
     const q = query(
       col,

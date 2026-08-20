@@ -45,11 +45,12 @@ describe('bucketSessionsByDay', () => {
   })
 
   it('does not lose an early-morning session on the last day of the window', () => {
-    // Sunday March 15, 03:00 still belongs to Saturday's window and must land
-    // in one of the seven buckets, not fall through unmatched.
-    const s = session(at(2026, 3, 15, 3, 0), 40)
+    // Monday March 16, 02:00 is inside the window (before 04:00 boundary) but has
+    // raw calendar date 2026-03-16, which matches no bucket label under buggy
+    // grouping. With correct implementation, getDayBoundary maps it to 2026-03-15.
+    const s = session(at(2026, 3, 16, 2, 0), 40)
     const buckets = bucketSessionsByDay([s], range.start, dayStart)
-    const total = buckets.reduce((sum, b) => sum + b.minutes, 0)
-    expect(total).toBe(40)
+    const sundayBucket = buckets.find((b) => b.date === getDayBoundary(at(2026, 3, 15, 10), dayStart))
+    expect(sundayBucket?.minutes).toBe(40)
   })
 })

@@ -39,9 +39,10 @@ function createSettingsStore() {
     listeners.forEach((l) => l())
   }
 
-  /** Vide le snapshot mémorisé pour que le test suivant relise le stockage. */
+  /** Vide le snapshot mémorisé et les abonnés pour isoler chaque test. */
   function resetForTests(): void {
     snapshot = null
+    listeners.clear()
   }
 
   return { getSnapshot, subscribe, setSettings, resetForTests }

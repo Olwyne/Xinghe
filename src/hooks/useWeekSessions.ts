@@ -3,15 +3,10 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '@/config/firebase'
 import { getStore } from '@/lib/localStore'
 import type { Session } from '@/features/goals/types'
+import { periodRange } from '@/lib/time'
+import { useTimerSettings } from '@/hooks/useTimerSettings'
 
 const LS_KEY = 'xinghe-sessions'
-
-function weekStart(): number {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
-  return d.getTime()
-}
 
 function dateStr(ts: number): string {
   return new Date(ts).toISOString().slice(0, 10)
@@ -23,31 +18,38 @@ export interface DayStat {
 }
 
 export function useWeekSessions(uid: string | null) {
+  const { settings } = useTimerSettings()
+  const dayStart = settings.dayStart
+  const range = periodRange('week', dayStart, Date.now())
+
   const [sessions, setSessions] = useState<Session[]>(() => {
     const all = getStore<Session[]>(LS_KEY, [])
-    const start = weekStart()
-    return all.filter((s) => s.startedAt >= start && s.type === 'focus')
+    return all.filter(
+      (s) => s.startedAt >= range.start && s.startedAt < range.end && s.type === 'focus',
+    )
   })
 
   useEffect(() => {
     if (!isFirebaseConfigured || !uid || !db) return
+    const { start, end } = periodRange('week', dayStart, Date.now())
     const col = collection(db, 'users', uid, 'sessions')
     const q = query(
       col,
-      where('startedAt', '>=', weekStart()),
+      where('startedAt', '>=', start),
+      where('startedAt', '<', end),
       where('type', '==', 'focus'),
     )
     const unsub = onSnapshot(q, (snap) => {
       setSessions(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Session)))
     })
     return unsub
-  }, [uid])
+  }, [uid, dayStart])
 
   const totalMs = sessions.reduce((s, e) => s + e.durationMs, 0)
   const totalMinutes = Math.floor(totalMs / 60_000)
 
   const byDay: DayStat[] = Array.from({ length: 7 }, (_, i) => {
-    const ts = weekStart() + i * 86_400_000
+    const ts = range.start + i * 86_400_000
     const date = dateStr(ts)
     const minutes = Math.floor(
       sessions

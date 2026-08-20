@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react-swc'
 import { VitePWA } from 'vite-plugin-pwa'
 
@@ -29,5 +29,10 @@ export default defineConfig({
     alias: {
       '@': new URL('./src', import.meta.url).pathname,
     },
+  },
+  test: {
+    // Git worktrees live under .claude/worktrees/ and hold full copies of src,
+    // so their test files would otherwise be collected alongside our own.
+    exclude: [...configDefaults.exclude, '.claude/**'],
   },
 })

@@ -24,11 +24,12 @@ export function computeAllocation(projects: Project[], globalPerDay: number): Al
     if (!p.timeTarget) return sum
     return sum + normalizeToDaily(p.timeTarget.period, p.timeTarget.targetMinutes)
   }, 0)
-  const totalTargetPerDay = Math.round(total)
   return {
-    totalTargetPerDay,
+    // Arrondi pour l'affichage seulement : la comparaison se fait sur le total
+    // exact, sinon un dépassement inférieur à la minute disparaît.
+    totalTargetPerDay: Math.round(total),
     globalPerDay,
-    isOverAllocated: globalPerDay > 0 && totalTargetPerDay > globalPerDay,
+    isOverAllocated: globalPerDay > 0 && total > globalPerDay,
   }
 }
 

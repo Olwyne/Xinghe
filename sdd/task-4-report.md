@@ -199,3 +199,85 @@ $ rtk grep -rn "setHours(0, 0, 0, 0)" src
 ## Concerns
 
 None outstanding. Both fixes are narrowly scoped to the two hooks plus one new colocated test file; no other files were touched; `recordSession`'s signature, Firestore bounds, localStorage keys, and the `type === 'focus'` filter are all unchanged.
+
+---
+
+# Test fix: "does not lose an early-morning session on the last day of the window"
+
+## New test body
+
+Replaced the weak assertion (total minutes across all buckets) with a direct bucket-matching assertion. Changed session timestamp from `at(2026, 3, 15, 3, 0)` (raw date 2026-03-15, still in the same bucket under buggy grouping) to `at(2026, 3, 16, 2, 0)` (raw date 2026-03-16, matches no bucket label under buggy grouping).
+
+```ts
+it('does not lose an early-morning session on the last day of the window', () => {
+  // Monday March 16, 02:00 is inside the window (before 04:00 boundary) but has
+  // raw calendar date 2026-03-16, which matches no bucket label under buggy
+  // grouping. With correct implementation, getDayBoundary maps it to 2026-03-15.
+  const s = session(at(2026, 3, 16, 2, 0), 40)
+  const buckets = bucketSessionsByDay([s], range.start, dayStart)
+  const sundayBucket = buckets.find((b) => b.date === getDayBoundary(at(2026, 3, 15, 10), dayStart))
+  expect(sundayBucket?.minutes).toBe(40)
+})
+```
+
+## Discrimination check
+
+Temporarily rewrote `bucketSessionsByDay` in `src/hooks/useWeekSessions.ts` to group by raw calendar date (buggy implementation):
+
+```ts
+const buggyRawDate = new Date(ts).toISOString().split('T')[0]
+// ...
+.filter((s) => {
+  const rawDate = new Date(s.startedAt).toISOString().split('T')[0]
+  return rawDate === buggyRawDate
+})
+```
+
+Ran the test — **it failed** as expected:
+```
+ ❯ src/hooks/useWeekSessions.test.ts (3 tests | 2 failed)
+     × does not lose an early-morning session on the last day of the window
+AssertionError: expected +0 to be 40
+```
+
+The session at 2026-03-16 02:00 with raw date 2026-03-16 found no matching bucket (all buckets label 2026-03-09 through 2026-03-15), so `sundayBucket?.minutes` was undefined/0, failing the assertion.
+
+Reverted the temporary break exactly (production code now byte-identical to original).
+
+Ran the test again — **it passed** with the correct `getDayBoundary` implementation.
+
+## Focused test result
+
+```
+$ rtk npx vitest run src/hooks/useWeekSessions.test.ts
+ RUN  v4.1.10 /Users/sob/Projets/Xinghe/.claude/worktrees/objectifs-temps
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+```
+
+All 3 tests pass, including the rewritten edge-case test.
+
+## Full suite result
+
+```
+$ rtk npx vitest run
+ Test Files  3 passed (3)
+      Tests  59 passed (59)
+```
+
+All 59 tests pass (56 pre-existing + 3 in the new test file).
+
+## Type check
+
+```
+$ rtk npx tsc -b
+TypeScript: No errors found
+```
+
+## Production code unchanged
+
+Verified `git diff src/hooks/useWeekSessions.ts` is empty — no changes to production code.
+
+## Commit
+
+`bcbee61 test: fix edge-case test for early-morning sessions in week window`

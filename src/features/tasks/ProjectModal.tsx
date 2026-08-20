@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Project, TargetPeriod } from './types'
 import { PROJECT_COLORS } from './constants'
-import { isValidTarget, parseTargetMinutes } from './targetValidation'
+import { isValidTarget, parseTargetMinutes, MAX_MINUTES } from './targetValidation'
+import { formatMinutesToHours } from '@/lib/time'
 import './ProjectModal.css'
 
 interface ProjectModalProps {
@@ -103,6 +104,11 @@ function ProjectRow({
               </button>
             ))}
           </div>
+          {!targetValid && (
+            <p className="pm-row__target-error">
+              {t('goals.targetTooLarge', { max: formatMinutesToHours(MAX_MINUTES[period]) })}
+            </p>
+          )}
           <button
             className="pm-row__target-clear"
             onClick={() => { setHours('0'); setMins('0') }}

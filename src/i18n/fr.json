@@ -150,6 +150,7 @@
     "thisDay": "aujourd'hui",
     "thisWeek": "cette semaine",
     "thisMonth": "ce mois-ci",
+    "targetTooLarge": "Maximum {{max}} pour cette cadence.",
     "overAllocated": "Tes objectifs cumulent {{total}} par jour, au-delà de ton objectif global de {{global}}.",
     "empty": "Aucun projet n'a encore d'objectif de temps. Ajoutes-en un depuis la gestion des projets."
   }

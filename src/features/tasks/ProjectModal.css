@@ -263,3 +263,9 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+.pm-row__target-error {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--xh-focus);
+}

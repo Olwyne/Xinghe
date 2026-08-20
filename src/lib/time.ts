@@ -28,3 +28,48 @@ export function todayDayKey(): string {
 export function msToMinutes(ms: number): number {
   return Math.round(ms / 60000)
 }
+
+export type TargetPeriod = 'day' | 'week' | 'month'
+
+export interface PeriodRange {
+  /** Inclusif. */
+  start: number
+  /** Exclusif. */
+  end: number
+}
+
+/**
+ * Fenêtre de la période courante, calée sur la frontière de journée configurable.
+ * Une session à 2h du matin avec dayStartHour=4 appartient à la journée de la veille.
+ */
+export function periodRange(
+  period: TargetPeriod,
+  dayStartHour: number,
+  now: number,
+): PeriodRange {
+  const offset = dayStartHour * 3_600_000
+  const shifted = new Date(now - offset)
+  const y = shifted.getFullYear()
+  const m = shifted.getMonth()
+  const d = shifted.getDate()
+
+  let startDate: Date
+  let endDate: Date
+
+  if (period === 'day') {
+    startDate = new Date(y, m, d)
+    endDate = new Date(y, m, d + 1)
+  } else if (period === 'week') {
+    const mondayIndex = (shifted.getDay() + 6) % 7
+    startDate = new Date(y, m, d - mondayIndex)
+    endDate = new Date(y, m, d - mondayIndex + 7)
+  } else {
+    startDate = new Date(y, m, 1)
+    endDate = new Date(y, m + 1, 1)
+  }
+
+  return {
+    start: startDate.getTime() + offset,
+    end: endDate.getTime() + offset,
+  }
+}

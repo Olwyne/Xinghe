@@ -1,30 +1,13 @@
-import { useState, useCallback } from 'react'
-import { DEFAULT_SETTINGS, type TimerSettings } from '@/features/timer/timerEngine'
+import { useSyncExternalStore } from 'react'
+import { settingsStore } from '@/lib/settingsStore'
 
-const STORAGE_KEY = 'xinghe-timer-settings'
-
-function loadSettings(): TimerSettings {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
-  } catch { /* use defaults */ }
-  return DEFAULT_SETTINGS
-}
-
-function saveSettings(settings: TimerSettings): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
-}
-
+/**
+ * Réglages du minuteur, partagés par tous les appelants.
+ *
+ * La signature est inchangée : les cinq consommateurs existants n'ont rien à
+ * modifier, mais ils voient désormais tous le même état.
+ */
 export function useTimerSettings() {
-  const [settings, setSettingsState] = useState<TimerSettings>(loadSettings)
-
-  const setSettings = useCallback((update: Partial<TimerSettings>) => {
-    setSettingsState((prev) => {
-      const next = { ...prev, ...update }
-      saveSettings(next)
-      return next
-    })
-  }, [])
-
-  return { settings, setSettings }
+  const settings = useSyncExternalStore(settingsStore.subscribe, settingsStore.getSnapshot)
+  return { settings, setSettings: settingsStore.setSettings }
 }

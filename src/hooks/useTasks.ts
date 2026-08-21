@@ -107,7 +107,13 @@ export function useTasks(uid: string | null, projectId: string) {
         updates.projectId !== current.projectId
 
       if (isFirebaseConfigured && uid && db) {
-        await updateDoc(docRef(uid, id), updates)
+        // Réaffecter les sessions AVANT d'écrire la tâche : si ce deuxième
+        // write échoue en premier, la tâche garde son ancien projectId et
+        // `movesProject` reste vrai au prochain essai, donc l'utilisateur
+        // peut simplement refaire le déplacement. Dans l'autre ordre, une
+        // fois la tâche mise à jour, `movesProject` serait faux et la
+        // reprise ne ferait plus rien : les sessions resteraient orphelines
+        // sur l'ancien projet.
         if (movesProject) {
           // Le temps déjà enregistré suit la tâche, sinon il resterait
           // compté dans les objectifs de son ancien projet.
@@ -120,12 +126,17 @@ export function useTasks(uid: string | null, projectId: string) {
             await batch.commit()
           }
         }
+        await updateDoc(docRef(uid, id), updates)
       } else {
-        persist((all) => all.map((t) => (t.id === id ? { ...t, ...updates } : t)))
+        // Même ordre et même raison qu'en Firestore : réaffecter les
+        // sessions d'abord pour qu'un échec de la mise à jour de la tâche
+        // laisse `movesProject` vrai au prochain essai, plutôt que de
+        // strander silencieusement les sessions sur l'ancien projet.
         if (movesProject) {
           const sessions = getStore<Session[]>('xinghe-sessions', [])
           setStore('xinghe-sessions', reassignSessions(sessions, id, updates.projectId!))
         }
+        persist((all) => all.map((t) => (t.id === id ? { ...t, ...updates } : t)))
       }
     },
     [uid, tasks, persist],

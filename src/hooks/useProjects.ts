@@ -15,6 +15,8 @@ import { db, isFirebaseConfigured } from '@/config/firebase'
 import { getStore, setStore } from '@/lib/localStore'
 import { INBOX_DEFAULTS } from '@/features/tasks/constants'
 import type { Project } from '@/features/tasks/types'
+import type { Session } from '@/features/goals/types'
+import { reassignSessions } from '@/features/tasks/timeEntry'
 
 const LS_KEY = 'xinghe-projects'
 
@@ -154,15 +156,33 @@ export function useProjects(uid: string | null) {
       if (!inbox) return
 
       if (isFirebaseConfigured && uid && db) {
-        const tasksSnap = await getDocs(
-          query(collection(db, `users/${uid}/tasks`), where('projectId', '==', id)),
-        )
+        // Le temps suit la tâche : les sessions du projet supprimé doivent
+        // migrer vers l'inbox dans le même batch que les tâches, sinon elles
+        // resteraient orphelines sur un projectId mort.
+        const [tasksSnap, sessionsSnap] = await Promise.all([
+          getDocs(query(collection(db, `users/${uid}/tasks`), where('projectId', '==', id))),
+          getDocs(query(collection(db, `users/${uid}/sessions`), where('projectId', '==', id))),
+        ])
         const batch = writeBatch(db)
+        sessionsSnap.docs.forEach((d) => batch.update(d.ref, { projectId: inbox.id }))
         tasksSnap.docs.forEach((d) => batch.update(d.ref, { projectId: inbox.id }))
         batch.delete(docRef(uid, id))
         await batch.commit()
       } else {
         const tasks = getStore<Array<{ id: string; projectId: string }>>('xinghe-tasks', [])
+        const affectedTaskIds = tasks
+          .filter((t) => t.projectId === id)
+          .map((t) => t.id)
+        // Réaffecter les sessions avant de déplacer les tâches et de
+        // supprimer le projet : si l'écriture s'interrompt ici, les tâches
+        // restent sur l'ancien projectId et la reprise refera le travail,
+        // au lieu de laisser des sessions orphelines sur un projet mort.
+        const sessions = getStore<Session[]>('xinghe-sessions', [])
+        const nextSessions = affectedTaskIds.reduce(
+          (acc, taskId) => reassignSessions(acc, taskId, inbox.id),
+          sessions,
+        )
+        setStore('xinghe-sessions', nextSessions)
         setStore(
           'xinghe-tasks',
           tasks.map((t) => (t.projectId === id ? { ...t, projectId: inbox.id } : t)),

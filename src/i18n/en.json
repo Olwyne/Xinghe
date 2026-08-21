@@ -69,7 +69,21 @@
     "fieldSubtasks": "Subtasks",
     "subtaskPlaceholder": "Add a subtask…",
     "fieldNotes": "Notes",
-    "notesPlaceholder": "Add notes…"
+    "notesPlaceholder": "Add notes…",
+    "timeEntries": "Time spent",
+    "addEntry": "Add",
+    "noEntries": "No time recorded yet.",
+    "entryDate": "Date",
+    "entryStart": "Start",
+    "entryDuration": "Duration",
+    "entryHours": "h",
+    "entryMinutes": "min",
+    "fromTimer": "Timer",
+    "edited": "edited",
+    "confirmDeleteEntry": "Delete?",
+    "errorDurationTooShort": "The duration must be at least one minute.",
+    "errorStartsInFuture": "An entry cannot start in the future.",
+    "entrySaveFailed": "Could not save. Try again."
   },
   "matrix": {
     "q1": {

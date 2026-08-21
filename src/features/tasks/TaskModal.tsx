@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { QUADRANT_META } from '@/features/matrix/quadrantMeta'
 import type { Project, Quadrant, Subtask, Task } from './types'
+import { TaskTimeEntries } from './TaskTimeEntries'
 import './TaskModal.css'
 
 const QUADRANTS: Quadrant[] = [1, 2, 3, 4]
@@ -219,6 +220,8 @@ export function TaskModal({
             </div>
           </div>
         </div>
+
+        {task && <TaskTimeEntries task={task} />}
 
         <div className="tm-actions">
           {onDelete && (

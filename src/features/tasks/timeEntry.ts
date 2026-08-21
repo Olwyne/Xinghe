@@ -8,18 +8,27 @@ export interface TimeEntryDraft {
   durationMinutes: number
 }
 
-export type TimeEntryError = 'duration-too-short' | 'starts-in-future'
+export type TimeEntryError = 'duration-too-short' | 'starts-in-future' | 'invalid-time'
 
 /**
- * Deux règles seulement : au moins une minute, pas de début dans le futur.
- * Les chevauchements sont autorisés — le seul qui gêne se verra sur la grille
- * horaire du calendrier, pas dans ce formulaire.
+ * Trois règles : au moins une minute, un jour et une heure de début valides
+ * (un champ date/heure vidé par l'utilisateur produit NaN), pas de début
+ * dans le futur. Les chevauchements sont autorisés — le seul qui gêne se
+ * verra sur la grille horaire du calendrier, pas dans ce formulaire.
  *
  * null = valide.
  */
 export function validateEntry(draft: TimeEntryDraft, now: number): TimeEntryError | null {
   if (!Number.isInteger(draft.durationMinutes) || draft.durationMinutes < 1) {
     return 'duration-too-short'
+  }
+  if (
+    !Number.isInteger(draft.day) ||
+    !Number.isInteger(draft.startMinutes) ||
+    draft.startMinutes < 0 ||
+    draft.startMinutes > 1439
+  ) {
+    return 'invalid-time'
   }
   if (draftToStartedAt(draft) > now) return 'starts-in-future'
   return null

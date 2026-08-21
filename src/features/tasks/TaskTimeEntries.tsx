@@ -16,6 +16,7 @@ import './TaskTimeEntries.css'
 const ERROR_KEYS: Record<TimeEntryError, string> = {
   'duration-too-short': 'tasks.errorDurationTooShort',
   'starts-in-future': 'tasks.errorStartsInFuture',
+  'invalid-time': 'tasks.errorInvalidTime',
 }
 
 function todayMidnight(): number {
@@ -191,7 +192,7 @@ export function TaskTimeEntries({ task }: { task: Task }) {
     <section className="tte">
       <div className="tte__header">
         <span className="tte__title">{t('tasks.timeEntries')}</span>
-        <span className="tte__total">{formatMinutesToHours(totalMinutes)}</span>
+        <span className="tte__total">{loading ? '—' : formatMinutesToHours(totalMinutes)}</span>
         <button type="button" className="tte__add" onClick={openNew}>
           {t('tasks.addEntry')}
         </button>
@@ -247,6 +248,7 @@ export function TaskTimeEntries({ task }: { task: Task }) {
                     <button
                       type="button"
                       className="tte__delete"
+                      aria-label={t('tasks.deleteEntry')}
                       onClick={() => {
                         setConfirmingDelete(s.id)
                         setFailedId(null)

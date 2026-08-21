@@ -81,8 +81,10 @@
     "fromTimer": "Minuteur",
     "edited": "corrigée",
     "confirmDeleteEntry": "Supprimer ?",
+    "deleteEntry": "Supprimer cette entrée",
     "errorDurationTooShort": "La durée doit être d'au moins une minute.",
     "errorStartsInFuture": "Une entrée ne peut pas commencer dans le futur.",
+    "errorInvalidTime": "Renseigne une date et une heure valides.",
     "entrySaveFailed": "Enregistrement impossible. Réessaie."
   },
   "matrix": {

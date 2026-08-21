@@ -69,6 +69,43 @@ describe('validateEntry', () => {
     const d = draft({ day: day(2026, 3, 11), durationMinutes: 0 })
     expect(validateEntry(d, NOW)).toBe('duration-too-short')
   })
+
+  it('refuse une durée fractionnaire', () => {
+    expect(validateEntry(draft({ durationMinutes: 1.5 }), NOW)).toBe('duration-too-short')
+  })
+
+  it('refuse un jour vidé (NaN, depuis un <input type="date"> vidé)', () => {
+    expect(validateEntry(draft({ day: NaN }), NOW)).toBe('invalid-time')
+  })
+
+  it('refuse une heure de début vidée (NaN, depuis un <input type="time"> vidé)', () => {
+    expect(validateEntry(draft({ startMinutes: NaN }), NOW)).toBe('invalid-time')
+  })
+
+  it('refuse un jour non entier', () => {
+    expect(validateEntry(draft({ day: day(2026, 3, 10) + 0.5 }), NOW)).toBe('invalid-time')
+  })
+
+  it("refuse une heure de début non entière", () => {
+    expect(validateEntry(draft({ startMinutes: 90.5 }), NOW)).toBe('invalid-time')
+  })
+
+  it('refuse une heure de début négative', () => {
+    expect(validateEntry(draft({ startMinutes: -1 }), NOW)).toBe('invalid-time')
+  })
+
+  it('refuse une heure de début à 1440 (hors journée)', () => {
+    expect(validateEntry(draft({ startMinutes: 1440 }), NOW)).toBe('invalid-time')
+  })
+
+  it('accepte la borne basse : minuit (0)', () => {
+    expect(validateEntry(draft({ startMinutes: 0 }), NOW)).toBeNull()
+  })
+
+  it('accepte la borne haute : 23h59 (1439)', () => {
+    const d = draft({ day: day(2020, 1, 5), startMinutes: 1439 })
+    expect(validateEntry(d, NOW)).toBeNull()
+  })
 })
 
 describe('draftToStartedAt', () => {
@@ -108,11 +145,31 @@ describe('sessionToDraft', () => {
     expect(sessionToDraft(s).durationMinutes).toBe(25)
   })
 
-  it("reste sur le bon jour local après un changement d'heure",  () => {
-    // Dernier dimanche de mars : passage à l'heure d'été dans la plupart des fuseaux européens
-    const s = session({ startedAt: day(2026, 3, 29) + 15 * 60 * 60_000 })
-    expect(sessionToDraft(s).day).toBe(day(2026, 3, 29))
-    expect(sessionToDraft(s).startMinutes).toBe(15 * 60)
+  it("reste sur le bon jour local après un changement d'heure", () => {
+    // Dernier dimanche de mars : passage à l'heure d'été dans la plupart des
+    // fuseaux européens. On fixe le fuseau du runner pour ne pas dépendre de
+    // la machine qui exécute les tests (une CI tourne souvent en UTC, où le
+    // cas serait vide de sens : sans décalage, aucune implémentation ne peut
+    // se tromper).
+    //
+    // 00h30 est choisi tout près de minuit : une décomposition naïve du jour
+    // par troncature de l'horodatage epoch (`startedAt - startedAt %
+    // 86_400_000`) ignore le fuseau local et retombe sur un jour différent
+    // dès que le décalage horaire local n'est pas nul — ce que la
+    // décomposition calendaire correcte (année/mois/jour locaux) évite.
+    // (No @types/node in this project, so process is reached via globalThis.)
+    const proc = (globalThis as { process?: { env: Record<string, string | undefined> } })
+      .process!
+    const originalTZ = proc.env.TZ
+    proc.env.TZ = 'Europe/Paris'
+    try {
+      const s = session({ startedAt: day(2026, 3, 29) + 30 * 60_000 })
+      const d = sessionToDraft(s)
+      expect(d.day).toBe(day(2026, 3, 29))
+      expect(d.startMinutes).toBe(30)
+    } finally {
+      proc.env.TZ = originalTZ
+    }
   })
 })
 
@@ -151,8 +208,23 @@ describe('reassignSessions', () => {
     expect(result[0].projectId).toBe('p9')
   })
 
-  it('ne retourne que des sessions, sans en perdre', () => {
-    const input = [session(), session({ id: 's2', taskId: 't2' })]
-    expect(reassignSessions(input, 't1', 'p2')).toHaveLength(2)
+  it('préserve les autres champs et ne mute ni le tableau ni ses sessions', () => {
+    const untouched = session({ id: 's2', taskId: 't2', projectId: 'p9' })
+    const target = session()
+    const input = [target, untouched]
+    const inputSnapshot = input.map((s) => ({ ...s }))
+
+    const result = reassignSessions(input, 't1', 'p2')
+
+    // La session non concernée garde tous ses champs, pas seulement projectId.
+    const resultUntouched = result.find((s) => s.id === 's2')
+    expect(resultUntouched).toEqual(untouched)
+
+    // Ni le tableau d'entrée ni ses objets ne sont mutés en place.
+    expect(input).toEqual(inputSnapshot)
+    expect(input[0]).toBe(target)
+    expect(input[1]).toBe(untouched)
+    expect(result).not.toBe(input)
+    expect(result[0]).not.toBe(target)
   })
 })

@@ -845,20 +845,26 @@ export function TaskTimeEntries({ task }: { task: Task }) {
   const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState<TimeEntryDraft>(emptyDraft)
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
-  const [saveFailed, setSaveFailed] = useState(false)
+  /**
+   * Id de la ligne (ou 'new' pour le formulaire d'ajout) dont la dernière
+   * tentative a échoué. Un id, pas un booléen, pour qu'un échec sur une
+   * ligne ne s'affiche jamais sur une autre pendant qu'une suppression
+   * concurrente est encore en vol.
+   */
+  const [failedId, setFailedId] = useState<string | null>(null)
 
   const error = validateEntry(draft, Date.now())
 
   function openNew() {
     setDraft(emptyDraft())
-    setSaveFailed(false)
+    setFailedId(null)
     setConfirmingDelete(null)
     setEditing('new')
   }
 
   function openEdit(session: Session) {
     setDraft(sessionToDraft(session))
-    setSaveFailed(false)
+    setFailedId(null)
     setConfirmingDelete(null)
     setEditing(session.id)
   }
@@ -869,20 +875,22 @@ export function TaskTimeEntries({ task }: { task: Task }) {
       if (editing === 'new') await addEntry(draft, task.projectId)
       else if (editing) await updateEntry(editing, draft)
       setEditing(null)
-      setSaveFailed(false)
+      setFailedId(null)
     } catch {
       // Le formulaire reste ouvert avec la saisie intacte.
-      setSaveFailed(true)
+      setFailedId(editing)
     }
   }
 
   async function remove(id: string) {
-    setSaveFailed(false)
+    setFailedId(null)
     try {
       await deleteEntry(id)
-      setConfirmingDelete(null)
+      // Une autre ligne a pu être armée pendant l'attente : ne désarmer
+      // que si c'est toujours celle-ci qui est en attente de confirmation.
+      setConfirmingDelete((prev) => (prev === id ? null : prev))
     } catch {
-      setSaveFailed(true)
+      setFailedId(id)
     }
   }
 
@@ -938,7 +946,7 @@ export function TaskTimeEntries({ task }: { task: Task }) {
       </label>
 
       {error && <p className="tte-form__error">{t(ERROR_KEYS[error])}</p>}
-      {saveFailed && <p className="tte-form__error">{t('tasks.entrySaveFailed')}</p>}
+      {failedId === editing && <p className="tte-form__error">{t('tasks.entrySaveFailed')}</p>}
 
       <div className="tte-form__actions">
         <button type="button" onClick={save} disabled={!!error}>{t('common.save')}</button>
@@ -992,12 +1000,12 @@ export function TaskTimeEntries({ task }: { task: Task }) {
                       className="tte__cancel"
                       onClick={() => {
                         setConfirmingDelete(null)
-                        setSaveFailed(false)
+                        setFailedId(null)
                       }}
                     >
                       {t('common.cancel')}
                     </button>
-                    {saveFailed && <p className="tte-form__error">{t('tasks.entrySaveFailed')}</p>}
+                    {failedId === s.id && <p className="tte-form__error">{t('tasks.entrySaveFailed')}</p>}
                   </>
                 ) : (
                   <>
@@ -1009,7 +1017,7 @@ export function TaskTimeEntries({ task }: { task: Task }) {
                       className="tte__delete"
                       onClick={() => {
                         setConfirmingDelete(s.id)
-                        setSaveFailed(false)
+                        setFailedId(null)
                       }}
                     >
                       ✕
@@ -1096,9 +1104,14 @@ Créer `src/features/tasks/TaskTimeEntries.css` :
 
 .tte__row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   font-size: 0.78rem;
+}
+
+.tte__row .tte-form__error {
+  flex-basis: 100%;
 }
 
 .tte__day {

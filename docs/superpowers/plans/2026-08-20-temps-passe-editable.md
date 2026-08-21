@@ -41,9 +41,10 @@
 - `src/features/goals/types.ts` — `Session` gagne `origin` et `editedAt`
 - `src/hooks/useTodaySessions.ts` — `recordSession` écrit `origin: 'timer'`
 - `src/features/timer/TimerScreen.tsx` — n'incrémente plus `Task.spentMs`
+- `src/features/tasks/TaskModal.tsx` — suppression du bloc stale `spentMs` (tâche 1), puis montage de `<TaskTimeEntries>` (tâche 5)
+- `src/features/tasks/TaskModal.css` — suppression de la règle `.tm-time`
 - `src/hooks/useTasks.ts` — un changement de projet réaffecte les sessions de la tâche
-- `src/features/tasks/TaskModal.tsx` — la section remplace l'affichage en lecture seule
-- `src/i18n/fr.json`, `src/i18n/en.json` — clés `tasks.*` de la section
+- `src/i18n/fr.json`, `src/i18n/en.json` — suppression de `tasks.timeSpent` (tâche 1), puis clés `tasks.*` de la section (tâche 5)
 
 ---
 
@@ -95,15 +96,60 @@ Dans `src/features/timer/TimerScreen.tsx`, remplacer le corps de `onFocusComplet
 
 Le temps de la tâche se calcule désormais depuis ses sessions ; l'accumulateur `Task.spentMs` n'est plus une source de vérité. Si `updateTask` ou `uid` ne sont plus utilisés ailleurs dans le fichier après cette suppression, retirer aussi leur récupération — `noUnusedLocals` le signalera.
 
-- [ ] **Step 4: Vérifier**
+- [ ] **Step 4: Retirer l'affichage stale de `spentMs` du modal**
+
+Dans `src/features/tasks/TaskModal.tsx`, supprimer le bloc aux lignes 223-227 :
+
+```tsx
+        {!!task?.spentMs && task.spentMs > 0 && (
+          <div className="tm-time">
+            {t('tasks.timeSpent', { minutes: Math.round(task.spentMs / 60000) })}
+          </div>
+        )}
+```
+
+Jusqu'à ce que la section des temps passés arrive, cet emplacement reste vide ; il sera occupé par `<TaskTimeEntries task={task} />` en tâche 5.
+
+**Amendement post-revue (pré-merge) :** ce plan n'avait pas repéré que `useTasks.ts` stampait encore `spentMs: 0` sur chaque tâche créée (`addTask`, ligne ~88 avant correction). C'est une écriture sans lecteur — le contrat de la tâche 1 est « `spentMs` n'est plus écrit » — donc supprimée du document créé par `addTask`. La déclaration du champ optionnel reste dans `src/features/tasks/types.ts` : les documents existants la conservent, il n'y a pas de migration.
+
+- [ ] **Step 5: Retirer la clé i18n devenue orpheline**
+
+Dans `src/i18n/fr.json` et `src/i18n/en.json`, supprimer la ligne `"timeSpent": …` du bloc `tasks`. Avant la suppression, vérifier qu'elle n'est utilisée nulle part :
+
+```bash
+rtk grep -rn "tasks.timeSpent" src
+```
+
+Expected: aucun résultat.
+
+- [ ] **Step 6: Retirer la règle CSS devenue orpheline**
+
+Dans `src/features/tasks/TaskModal.css`, vérifier que `.tm-time` n'est utilisé que par le bloc qu'on vient de supprimer :
+
+```bash
+rtk grep -rn "tm-time" src
+```
+
+Expected: une seule occurrence dans `TaskModal.tsx` qui sera supprimée, et une dans le CSS à retirer.
+
+Supprimer les lignes 218-221 :
+
+```css
+.tm-time {
+  font-size: var(--xh-text-sm);
+  color: var(--xh-text-faint);
+}
+```
+
+- [ ] **Step 7: Vérifier**
 
 Run: `rtk npx tsc -b && rtk npm test`
 Expected: aucune erreur de type, 106 tests au vert.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-rtk git add src/features/goals/types.ts src/hooks/useTodaySessions.ts src/features/timer/TimerScreen.tsx && rtk git commit -m "feat: mark timer sessions with an origin, stop writing Task.spentMs"
+rtk git add src/features/goals/types.ts src/hooks/useTodaySessions.ts src/features/timer/TimerScreen.tsx src/features/tasks/TaskModal.tsx src/features/tasks/TaskModal.css src/i18n/fr.json src/i18n/en.json && rtk git commit -m "feat: mark timer sessions with an origin, stop writing Task.spentMs"
 ```
 
 ---
@@ -376,6 +422,8 @@ Expected: PASS, 23 tests.
 rtk git add src/features/tasks/timeEntry.ts src/features/tasks/timeEntry.test.ts && rtk git commit -m "feat: add pure time-entry logic"
 ```
 
+**Amendement post-revue (pré-merge) :** les « deux règles seulement » ne suffisaient pas. Les champs `day` et `startMinutes` viennent d'`<input type="date">` / `<input type="time">` que l'utilisateur peut vider ; `fromDateInput('')` et `fromTimeInput('')` (dans `TaskTimeEntries.tsx`) produisent alors `NaN`, et `NaN > now` valant `false`, `validateEntry` laissait passer une session avec `startedAt: NaN` — un double Firestore légal, invisible à tout filtre par plage de dates, comptant pour aucune cible ni statistique. `validateEntry` porte désormais une troisième règle : `day` doit être un entier, et `startMinutes` un entier dans `0..1439`, sous un troisième code d'erreur `'invalid-time'` (clé `tasks.errorInvalidTime`, dans les deux fichiers de langue). `TimeEntryError` est donc `'duration-too-short' | 'starts-in-future' | 'invalid-time'`. Couvert par des tests : jour vidé, heure vidée, valeurs non entières, et les bornes 0 et 1439. Un test manquant sur le rejet d'une durée fractionnaire (`Number.isInteger`) a aussi été ajouté — sans lui, retirer ce garde-fou laissait la suite verte.
+
 ---
 
 ### Task 3: Les sessions suivent la tâche qui change de projet
@@ -430,7 +478,13 @@ Remplacer `updateTask` :
         updates.projectId !== current.projectId
 
       if (isFirebaseConfigured && uid && db) {
-        await updateDoc(docRef(uid, id), updates)
+        // Réaffecter les sessions AVANT d'écrire la tâche : si ce deuxième
+        // write échoue en premier, la tâche garde son ancien projectId et
+        // `movesProject` reste vrai au prochain essai, donc l'utilisateur
+        // peut simplement refaire le déplacement. Dans l'autre ordre, une
+        // fois la tâche mise à jour, `movesProject` serait faux et la
+        // reprise ne ferait plus rien : les sessions resteraient orphelines
+        // sur l'ancien projet.
         if (movesProject) {
           // Le temps déjà enregistré suit la tâche, sinon il resterait
           // compté dans les objectifs de son ancien projet.
@@ -443,12 +497,17 @@ Remplacer `updateTask` :
             await batch.commit()
           }
         }
+        await updateDoc(docRef(uid, id), updates)
       } else {
-        persist((all) => all.map((t) => (t.id === id ? { ...t, ...updates } : t)))
+        // Même ordre et même raison qu'en Firestore : réaffecter les
+        // sessions d'abord pour qu'un échec de la mise à jour de la tâche
+        // laisse `movesProject` vrai au prochain essai, plutôt que de
+        // strander silencieusement les sessions sur l'ancien projet.
         if (movesProject) {
           const sessions = getStore<Session[]>('xinghe-sessions', [])
           setStore('xinghe-sessions', reassignSessions(sessions, id, updates.projectId!))
         }
+        persist((all) => all.map((t) => (t.id === id ? { ...t, ...updates } : t)))
       }
     },
     [uid, tasks, persist],
@@ -456,6 +515,14 @@ Remplacer `updateTask` :
 ```
 
 Le tableau de dépendances gagne `tasks` : la fonction lit désormais la tâche courante pour savoir si le projet change.
+
+L'ordre des deux écritures compte : les sessions sont réaffectées avant que la
+tâche ne soit mise à jour, dans les deux branches. Si l'écriture des sessions
+échoue, la tâche garde son ancien `projectId` et le garde `movesProject`
+reste vrai au prochain essai — l'utilisateur peut simplement refaire le
+déplacement. Dans l'ordre inverse, une fois la tâche mise à jour, le garde
+`movesProject` deviendrait faux et une reprise ne ferait plus rien, laissant
+les sessions orphelines sur l'ancien projet.
 
 - [ ] **Step 3: Vérifier**
 
@@ -467,6 +534,8 @@ Expected: aucune erreur de type, 129 tests au vert (106 + 23).
 ```bash
 rtk git add src/hooks/useTasks.ts && rtk git commit -m "feat: move a task's sessions when its project changes"
 ```
+
+**Amendement post-revue (pré-merge) :** cette tâche n'avait couvert que `updateTask`, mais ce n'est pas le seul chemin qui change le `projectId` d'une tâche. `useProjects.ts` → `deleteProject` réaffecte déjà les tâches d'un projet supprimé vers l'inbox (`writeBatch` en Firestore, `setStore` en local) sans toucher leurs sessions, qui gardaient l'ancien `projectId` mort — exactement la divergence que cette tâche visait à éliminer. `deleteProject` réaffecte désormais aussi les sessions : en Firestore, une requête `where('projectId', '==', id)` sur `sessions` ajoute ses mises à jour au même `writeBatch` que les tâches et la suppression du projet (un seul commit atomique, donc pas de problème d'ordre de reprise) ; en local, `reassignSessions` est appelé pour chaque tâche affectée, sessions déplacées avant les tâches et avant le retrait du projet, pour la même raison de reprise sur échec qu'`updateTask`.
 
 ---
 
@@ -643,6 +712,14 @@ Expected: aucune erreur de type, 129 tests au vert.
 rtk git add src/hooks/useTaskSessions.ts && rtk git commit -m "feat: add useTaskSessions hook"
 ```
 
+**Amendements post-revue (pré-merge) :**
+
+1. Le garde `if (!isFirebaseConfigured || !uid || !db)` ci-dessus traitait « Firebase configuré mais `uid` pas encore résolu » comme « pas de Firebase » : il lisait `localStorage` (vide dans un déploiement Firebase), affichait tout de suite l'état vide « Aucun temps enregistré. » puis, une fois l'utilisateur connu, les vrais squelettes puis les données — la séquence que la tâche 5 interdit explicitement. Un clic dans cette fenêtre pouvait aussi router une écriture vers `localStorage` au lieu de Firestore, où elle se perdait. Le hook distingue désormais les deux cas : seul `!isFirebaseConfigured` prend la branche locale ; si Firebase est configuré mais `uid` est encore `null`, le hook reste en `loading` et les trois fonctions d'écriture (`addEntry`, `updateEntry`, `deleteEntry`) lèvent plutôt que d'écrire dans le mauvais magasin.
+
+2. `updateEntry` n'écrivait pas `endedAt`, laissant une session mesurée avec un `endedAt` obsolète après correction — champ à trois états (correct, périmé, absent) que la grille horaire du calendrier (sous-projet C) doit pouvoir lire sans ambiguïté. `addEntry` et `updateEntry` maintiennent maintenant `endedAt = startedAt + durationMs` sur toute session écrite par l'application.
+
+Ces deux points sont couverts en amont par l'appelant (`TaskTimeEntries.tsx`, tâche 5) et par construction dans le hook ; il n'existe pas d'infrastructure de test de hooks dans ce projet pour les épingler directement.
+
 ---
 
 ### Task 5: Section « Temps passé » dans le modal de tâche
@@ -697,6 +774,8 @@ Dans `src/i18n/en.json`, dans l'objet `tasks` :
 ```
 
 Supprimer la clé `tasks.timeSpent` des deux fichiers : l'affichage qu'elle servait disparaît à l'étape 3.
+
+**Amendement post-revue (pré-merge) :** deux clés manquaient et ont été ajoutées aux deux fichiers de langue : `deleteEntry` (nom accessible du bouton `✕`, cf. amendement 2 de l'étape « Commit » plus bas) et `errorInvalidTime` (troisième code d'erreur de `validateEntry`, cf. l'amendement de la tâche 2). FR : `"deleteEntry": "Supprimer cette entrée"`, `"errorInvalidTime": "Renseigne une date et une heure valides."`. EN : `"deleteEntry": "Delete this entry"`, `"errorInvalidTime": "Enter a valid date and time."`.
 
 - [ ] **Step 2: Écrire le composant**
 
@@ -782,19 +861,27 @@ export function TaskTimeEntries({ task }: { task: Task }) {
   const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState<TimeEntryDraft>(emptyDraft)
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
-  const [saveFailed, setSaveFailed] = useState(false)
+  /**
+   * Id de la ligne (ou 'new' pour le formulaire d'ajout) dont la dernière
+   * tentative a échoué. Un id, pas un booléen, pour qu'un échec sur une
+   * ligne ne s'affiche jamais sur une autre pendant qu'une suppression
+   * concurrente est encore en vol.
+   */
+  const [failedId, setFailedId] = useState<string | null>(null)
 
   const error = validateEntry(draft, Date.now())
 
   function openNew() {
     setDraft(emptyDraft())
-    setSaveFailed(false)
+    setFailedId(null)
+    setConfirmingDelete(null)
     setEditing('new')
   }
 
   function openEdit(session: Session) {
     setDraft(sessionToDraft(session))
-    setSaveFailed(false)
+    setFailedId(null)
+    setConfirmingDelete(null)
     setEditing(session.id)
   }
 
@@ -804,19 +891,22 @@ export function TaskTimeEntries({ task }: { task: Task }) {
       if (editing === 'new') await addEntry(draft, task.projectId)
       else if (editing) await updateEntry(editing, draft)
       setEditing(null)
-      setSaveFailed(false)
+      setFailedId(null)
     } catch {
       // Le formulaire reste ouvert avec la saisie intacte.
-      setSaveFailed(true)
+      setFailedId(editing)
     }
   }
 
   async function remove(id: string) {
+    setFailedId(null)
     try {
       await deleteEntry(id)
-      setConfirmingDelete(null)
+      // Une autre ligne a pu être armée pendant l'attente : ne désarmer
+      // que si c'est toujours celle-ci qui est en attente de confirmation.
+      setConfirmingDelete((prev) => (prev === id ? null : prev))
     } catch {
-      setSaveFailed(true)
+      setFailedId(id)
     }
   }
 
@@ -872,7 +962,7 @@ export function TaskTimeEntries({ task }: { task: Task }) {
       </label>
 
       {error && <p className="tte-form__error">{t(ERROR_KEYS[error])}</p>}
-      {saveFailed && <p className="tte-form__error">{t('tasks.entrySaveFailed')}</p>}
+      {failedId === editing && <p className="tte-form__error">{t('tasks.entrySaveFailed')}</p>}
 
       <div className="tte-form__actions">
         <button type="button" onClick={save} disabled={!!error}>{t('common.save')}</button>
@@ -917,9 +1007,22 @@ export function TaskTimeEntries({ task }: { task: Task }) {
                   {s.editedAt && <span title={t('tasks.edited')}>✎</span>}
                 </span>
                 {confirmingDelete === s.id ? (
-                  <button type="button" className="tte__confirm" onClick={() => remove(s.id)}>
-                    {t('tasks.confirmDeleteEntry')}
-                  </button>
+                  <>
+                    <button type="button" className="tte__confirm" onClick={() => remove(s.id)}>
+                      {t('tasks.confirmDeleteEntry')}
+                    </button>
+                    <button
+                      type="button"
+                      className="tte__cancel"
+                      onClick={() => {
+                        setConfirmingDelete(null)
+                        setFailedId(null)
+                      }}
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    {failedId === s.id && <p className="tte-form__error">{t('tasks.entrySaveFailed')}</p>}
+                  </>
                 ) : (
                   <>
                     <button type="button" className="tte__edit" onClick={() => openEdit(s)}>
@@ -928,7 +1031,10 @@ export function TaskTimeEntries({ task }: { task: Task }) {
                     <button
                       type="button"
                       className="tte__delete"
-                      onClick={() => setConfirmingDelete(s.id)}
+                      onClick={() => {
+                        setConfirmingDelete(s.id)
+                        setFailedId(null)
+                      }}
                     >
                       ✕
                     </button>
@@ -956,7 +1062,7 @@ Dans `src/features/tasks/TaskModal.tsx`, ajouter l'import :
 import { TaskTimeEntries } from './TaskTimeEntries'
 ```
 
-et remplacer le bloc `{!!task?.spentMs && task.spentMs > 0 && (…)}` par :
+Le bloc `{!!task?.spentMs && task.spentMs > 0 && (…)}` a déjà été supprimé en tâche 1. Monter la nouvelle section à la même place (entre la section des sous-tâches et les boutons d'action) :
 
 ```tsx
         {task && <TaskTimeEntries task={task} />}
@@ -1014,9 +1120,14 @@ Créer `src/features/tasks/TaskTimeEntries.css` :
 
 .tte__row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   font-size: 0.78rem;
+}
+
+.tte__row .tte-form__error {
+  flex-basis: 100%;
 }
 
 .tte__day {
@@ -1043,7 +1154,8 @@ Créer `src/features/tasks/TaskTimeEntries.css` :
 
 .tte__edit,
 .tte__delete,
-.tte__confirm {
+.tte__confirm,
+.tte__cancel {
   padding: 2px 6px;
   border: none;
   background: none;
@@ -1158,6 +1270,16 @@ Expected: aucune erreur de type, 129 tests au vert.
 rtk git add src/features/tasks/TaskTimeEntries.tsx src/features/tasks/TaskTimeEntries.css src/features/tasks/TaskModal.tsx src/i18n/fr.json src/i18n/en.json && rtk git commit -m "feat: list, edit and add time entries from the task modal"
 ```
 
+**Amendements post-revue (pré-merge) :**
+
+1. `<span className="tte__total">{formatMinutesToHours(totalMinutes)}</span>` était rendu en dehors du ternaire `loading`, donc `0 min` s'affichait au-dessus des squelettes à chaque ouverture, avant les vraies données — exactement la séquence transitoire interdite par la spec. Le total affiche maintenant un tiret cadratin (`—`) pendant `loading`, sans nouvelle variable CSS.
+
+2. Le bouton `✕` de suppression n'avait ni texte ni `title` — aucun nom accessible. Il porte désormais `aria-label={t('tasks.deleteEntry')}`, avec la clé ajoutée dans les deux fichiers de langue (elle avait été prévue dans la spec d'origine puis perdue quand le bouton est devenu une icône).
+
+3. `ERROR_KEYS` gagne l'entrée `'invalid-time': 'tasks.errorInvalidTime'` pour le troisième code d'erreur ajouté à `validateEntry` en tâche 2 (voir l'amendement de cette tâche).
+
+4. Ce composant appelle `useAuth()` pour obtenir `uid` ; comme `useAuth` est un hook « par appel » avec son propre `useState(null)`, une instance fraîchement montée voit `uid === null` le temps que `onAuthStateChanged` résolve, même si `AuthGuard` a déjà résolu l'authentification ailleurs dans l'arbre. C'est ce qui alimentait le bug de squelette de la tâche 4 (amendement 1) : corrigé côté `useTaskSessions`, pas ici, pour ne pas dupliquer la logique de chargement dans chaque consommateur.
+
 ---
 
 ### Task 6: Vérification finale
@@ -1167,7 +1289,7 @@ rtk git add src/features/tasks/TaskTimeEntries.tsx src/features/tasks/TaskTimeEn
 - [ ] **Step 1: Suite complète**
 
 Run: `rtk npm test`
-Expected: 129 tests au vert, sortie sans avertissement.
+Expected (post-revue) : 138 tests au vert (129 + 9 ajoutés en revue pré-merge : 3 sur `validateEntry` pour la garde `NaN`/non-entier introduite dans son amendement, 2 sur les bornes 0/1439, 1 sur la durée fractionnaire, 1 réécriture de discrimination DST pour `sessionToDraft`, et 1 réécriture de `reassignSessions` pour l'immutabilité — voir les amendements des tâches 2 et 6bis).
 
 - [ ] **Step 2: Build de production**
 
@@ -1204,3 +1326,9 @@ Arrêter le serveur.
 ```bash
 rtk git add -A && rtk git commit -m "fix: address issues found during final verification"
 ```
+
+**Amendement post-revue (pré-merge) — deux tests qui ne pinçaient rien :**
+
+- Le test DST de `sessionToDraft` (tâche 2) construisait une session à 15h00 et vérifiait `startMinutes === 900` et le bon jour. La première assertion est vraie par construction — `(startedAt - dayStart) / 60_000` vaut 900 quel que soit le calcul de `dayStart` tant qu'il représente *un* minuit local. La seconde tient aussi bien pour la décomposition calendaire de l'implémentation que pour une troncature naïve de l'epoch (`startedAt - startedAt % 86_400_000`) tant que l'heure testée est loin de minuit et que le fuseau du runner ne fait pas la différence. Le test a été réécrit sur une heure proche de la limite (00h30) avec le fuseau du runner fixé explicitement à `Europe/Paris` (une CI tourne souvent en UTC, où le cas serait vide de sens). Discrimination vérifiée manuellement : en substituant temporairement `sessionToDraft` par la troncature naïve, le test échoue (`expected 1774656000000 to be 1774738800000`) ; l'implémentation d'origine restaurée, il passe. Voir `sdd/final-fixes-report.md` pour le détail de cette vérification.
+
+- Le test `reassignSessions` qui ne vérifiait que `toHaveLength(2)` passait pour une implémentation qui renvoie deux sessions arbitraires, ou qui mute ses entrées en place. Réécrit pour vérifier la préservation des champs de la session non concernée et la non-mutation du tableau d'entrée et de ses objets.

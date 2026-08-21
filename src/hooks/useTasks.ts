@@ -8,10 +8,15 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  getDocs,
+  where,
+  writeBatch,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '@/config/firebase'
 import { getStore, setStore } from '@/lib/localStore'
 import type { Task, Quadrant } from '@/features/tasks/types'
+import type { Session } from '@/features/goals/types'
+import { reassignSessions } from '@/features/tasks/timeEntry'
 
 const LS_KEY = 'xinghe-tasks'
 
@@ -80,7 +85,6 @@ export function useTasks(uid: string | null, projectId: string) {
         notes: '',
         dueDate: dueDate ?? null,
         subtasks: subtasks ?? [],
-        spentMs: 0,
       }
 
       if (isFirebaseConfigured && uid && db) {
@@ -95,13 +99,46 @@ export function useTasks(uid: string | null, projectId: string) {
 
   const updateTask = useCallback(
     async (id: string, updates: Partial<Omit<Task, 'id'>>) => {
+      const current = tasks.find((t) => t.id === id)
+      const movesProject =
+        updates.projectId !== undefined &&
+        current !== undefined &&
+        updates.projectId !== current.projectId
+
       if (isFirebaseConfigured && uid && db) {
+        // Réaffecter les sessions AVANT d'écrire la tâche : si ce deuxième
+        // write échoue en premier, la tâche garde son ancien projectId et
+        // `movesProject` reste vrai au prochain essai, donc l'utilisateur
+        // peut simplement refaire le déplacement. Dans l'autre ordre, une
+        // fois la tâche mise à jour, `movesProject` serait faux et la
+        // reprise ne ferait plus rien : les sessions resteraient orphelines
+        // sur l'ancien projet.
+        if (movesProject) {
+          // Le temps déjà enregistré suit la tâche, sinon il resterait
+          // compté dans les objectifs de son ancien projet.
+          const snap = await getDocs(
+            query(collection(db, `users/${uid}/sessions`), where('taskId', '==', id)),
+          )
+          if (!snap.empty) {
+            const batch = writeBatch(db)
+            snap.docs.forEach((d) => batch.update(d.ref, { projectId: updates.projectId }))
+            await batch.commit()
+          }
+        }
         await updateDoc(docRef(uid, id), updates)
       } else {
+        // Même ordre et même raison qu'en Firestore : réaffecter les
+        // sessions d'abord pour qu'un échec de la mise à jour de la tâche
+        // laisse `movesProject` vrai au prochain essai, plutôt que de
+        // strander silencieusement les sessions sur l'ancien projet.
+        if (movesProject) {
+          const sessions = getStore<Session[]>('xinghe-sessions', [])
+          setStore('xinghe-sessions', reassignSessions(sessions, id, updates.projectId!))
+        }
         persist((all) => all.map((t) => (t.id === id ? { ...t, ...updates } : t)))
       }
     },
-    [uid, persist],
+    [uid, tasks, persist],
   )
 
   const toggleComplete = useCallback(

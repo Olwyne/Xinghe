@@ -1,0 +1,180 @@
+.tte {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.tte__header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.tte__title {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.tte__total {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+}
+
+.tte__add {
+  margin-left: auto;
+  padding: 4px 10px;
+  border: 1px solid var(--xh-card-border, rgba(255, 255, 255, 0.12));
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.tte__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tte__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+
+.tte__row .tte-form__error {
+  flex-basis: 100%;
+}
+
+.tte__day {
+  opacity: 0.7;
+  min-width: 92px;
+}
+
+.tte__range {
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+
+.tte__duration {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.tte__origin {
+  display: flex;
+  gap: 3px;
+  opacity: 0.6;
+  min-width: 28px;
+}
+
+.tte__edit,
+.tte__delete,
+.tte__confirm,
+.tte__cancel {
+  padding: 2px 6px;
+  border: none;
+  background: none;
+  color: inherit;
+  opacity: 0.6;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.tte__confirm {
+  color: var(--xh-focus);
+  opacity: 1;
+}
+
+.tte__empty {
+  margin: 0;
+  font-size: 0.78rem;
+  opacity: 0.55;
+}
+
+.tte__skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tte__skeleton {
+  height: 20px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tte-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--xh-card-border, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+}
+
+.tte-form__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+
+.tte-form__field span {
+  min-width: 56px;
+  opacity: 0.7;
+}
+
+.tte-form__field input {
+  padding: 4px 6px;
+  background: var(--xh-card, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--xh-card-border, rgba(255, 255, 255, 0.12));
+  border-radius: 6px;
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.tte-form__duration {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tte-form__duration input {
+  width: 52px;
+}
+
+.tte-form__error {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--xh-focus);
+}
+
+.tte-form__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tte-form__actions button {
+  padding: 4px 10px;
+  border: 1px solid var(--xh-card-border, rgba(255, 255, 255, 0.12));
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.tte-form__actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

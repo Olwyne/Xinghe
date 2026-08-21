@@ -68,9 +68,24 @@
     "fieldDueDate": "Échéance",
     "fieldSubtasks": "Sous-tâches",
     "subtaskPlaceholder": "Ajouter une sous-tâche…",
-    "timeSpent": "{{minutes}} min de focus enregistrées",
     "fieldNotes": "Notes",
-    "notesPlaceholder": "Ajouter des notes…"
+    "notesPlaceholder": "Ajouter des notes…",
+    "timeEntries": "Temps passé",
+    "addEntry": "Ajouter",
+    "noEntries": "Aucun temps enregistré.",
+    "entryDate": "Date",
+    "entryStart": "Début",
+    "entryDuration": "Durée",
+    "entryHours": "h",
+    "entryMinutes": "min",
+    "fromTimer": "Minuteur",
+    "edited": "corrigée",
+    "confirmDeleteEntry": "Supprimer ?",
+    "deleteEntry": "Supprimer cette entrée",
+    "errorDurationTooShort": "La durée doit être d'au moins une minute.",
+    "errorStartsInFuture": "Une entrée ne peut pas commencer dans le futur.",
+    "errorInvalidTime": "Renseigne une date et une heure valides.",
+    "entrySaveFailed": "Enregistrement impossible. Réessaie."
   },
   "matrix": {
     "q1": {

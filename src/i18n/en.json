@@ -68,9 +68,24 @@
     "fieldDueDate": "Due date",
     "fieldSubtasks": "Subtasks",
     "subtaskPlaceholder": "Add a subtask…",
-    "timeSpent": "{{minutes}} min of focus recorded",
     "fieldNotes": "Notes",
-    "notesPlaceholder": "Add notes…"
+    "notesPlaceholder": "Add notes…",
+    "timeEntries": "Time spent",
+    "addEntry": "Add",
+    "noEntries": "No time recorded yet.",
+    "entryDate": "Date",
+    "entryStart": "Start",
+    "entryDuration": "Duration",
+    "entryHours": "h",
+    "entryMinutes": "min",
+    "fromTimer": "Timer",
+    "edited": "edited",
+    "confirmDeleteEntry": "Delete?",
+    "deleteEntry": "Delete this entry",
+    "errorDurationTooShort": "The duration must be at least one minute.",
+    "errorStartsInFuture": "An entry cannot start in the future.",
+    "errorInvalidTime": "Enter a valid date and time.",
+    "entrySaveFailed": "Could not save. Try again."
   },
   "matrix": {
     "q1": {

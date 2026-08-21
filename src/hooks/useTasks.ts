@@ -8,10 +8,15 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  getDocs,
+  where,
+  writeBatch,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '@/config/firebase'
 import { getStore, setStore } from '@/lib/localStore'
 import type { Task, Quadrant } from '@/features/tasks/types'
+import type { Session } from '@/features/goals/types'
+import { reassignSessions } from '@/features/tasks/timeEntry'
 
 const LS_KEY = 'xinghe-tasks'
 
@@ -95,13 +100,35 @@ export function useTasks(uid: string | null, projectId: string) {
 
   const updateTask = useCallback(
     async (id: string, updates: Partial<Omit<Task, 'id'>>) => {
+      const current = tasks.find((t) => t.id === id)
+      const movesProject =
+        updates.projectId !== undefined &&
+        current !== undefined &&
+        updates.projectId !== current.projectId
+
       if (isFirebaseConfigured && uid && db) {
         await updateDoc(docRef(uid, id), updates)
+        if (movesProject) {
+          // Le temps déjà enregistré suit la tâche, sinon il resterait
+          // compté dans les objectifs de son ancien projet.
+          const snap = await getDocs(
+            query(collection(db, `users/${uid}/sessions`), where('taskId', '==', id)),
+          )
+          if (!snap.empty) {
+            const batch = writeBatch(db)
+            snap.docs.forEach((d) => batch.update(d.ref, { projectId: updates.projectId }))
+            await batch.commit()
+          }
+        }
       } else {
         persist((all) => all.map((t) => (t.id === id ? { ...t, ...updates } : t)))
+        if (movesProject) {
+          const sessions = getStore<Session[]>('xinghe-sessions', [])
+          setStore('xinghe-sessions', reassignSessions(sessions, id, updates.projectId!))
+        }
       }
     },
-    [uid, persist],
+    [uid, tasks, persist],
   )
 
   const toggleComplete = useCallback(

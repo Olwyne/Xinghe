@@ -109,6 +109,7 @@ export function TaskTimeEntries({ task }: { task: Task }) {
   }
 
   async function remove(id: string) {
+    setSaveFailed(false)
     try {
       await deleteEntry(id)
       setConfirmingDelete(null)
@@ -221,10 +222,14 @@ export function TaskTimeEntries({ task }: { task: Task }) {
                     <button
                       type="button"
                       className="tte__cancel"
-                      onClick={() => setConfirmingDelete(null)}
+                      onClick={() => {
+                        setConfirmingDelete(null)
+                        setSaveFailed(false)
+                      }}
                     >
                       {t('common.cancel')}
                     </button>
+                    {saveFailed && <p className="tte-form__error">{t('tasks.entrySaveFailed')}</p>}
                   </>
                 ) : (
                   <>
@@ -234,7 +239,10 @@ export function TaskTimeEntries({ task }: { task: Task }) {
                     <button
                       type="button"
                       className="tte__delete"
-                      onClick={() => setConfirmingDelete(s.id)}
+                      onClick={() => {
+                        setConfirmingDelete(s.id)
+                        setSaveFailed(false)
+                      }}
                     >
                       ✕
                     </button>

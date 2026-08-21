@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useTasks } from '@/hooks/useTasks'
@@ -28,6 +28,7 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
 
   const [attaching, setAttaching] = useState<string | null>(null)
   const [attachFailed, setAttachFailed] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
 
   const projectColors = useMemo(
     () => Object.fromEntries(projects.map((p) => [p.id, p.color])),
@@ -50,9 +51,25 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
     minute: '2-digit',
   })
 
-  const now = Date.now()
   const showNowLine = now >= range.start && now < range.end
   const nowTop = ((now - range.start) / (range.end - range.start)) * 100
+
+  // Ne tourne que si le jour affiché est aujourd'hui : la ligne "now" n'est
+  // rendue que dans ce cas, donc un intervalle sur un autre jour serait pur
+  // gaspillage. Se coupe au changement de jour et au démontage.
+  useEffect(() => {
+    if (!showNowLine) return
+    const id = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [showNowLine, range.start, range.end])
+
+  function navigate(next: number) {
+    // Repartir sans panneau ni message d'échec : ils pointent sur une session
+    // qui n'est plus à l'écran une fois qu'on a changé de jour.
+    setAttaching(null)
+    setAttachFailed(false)
+    setReference(next)
+  }
 
   function openAttach(sessionId: string) {
     // Repartir sans message d'échec : celui d'une tentative précédente ne doit
@@ -84,7 +101,7 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
           type="button"
           className="daygrid__navbtn"
           aria-label={t('calendar.previousDay')}
-          onClick={() => setReference((r) => r - 24 * HOUR)}
+          onClick={() => navigate(reference - 24 * HOUR)}
         >
           ‹
         </button>
@@ -93,14 +110,14 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
           type="button"
           className="daygrid__navbtn"
           aria-label={t('calendar.nextDay')}
-          onClick={() => setReference((r) => r + 24 * HOUR)}
+          onClick={() => navigate(reference + 24 * HOUR)}
         >
           ›
         </button>
         <button
           type="button"
           className="daygrid__today"
-          onClick={() => setReference(Date.now())}
+          onClick={() => navigate(Date.now())}
         >
           {t('calendar.today')}
         </button>

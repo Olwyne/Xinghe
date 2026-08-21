@@ -85,7 +85,6 @@ export function useTasks(uid: string | null, projectId: string) {
         notes: '',
         dueDate: dueDate ?? null,
         subtasks: subtasks ?? [],
-        spentMs: 0,
       }
 
       if (isFirebaseConfigured && uid && db) {

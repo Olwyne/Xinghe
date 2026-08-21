@@ -56,7 +56,7 @@
 **Interfaces:**
 - Consumes: `Session` de `@/features/goals/types`, `PeriodRange` de `@/lib/time`
 - Produces:
-  - `interface PositionedSession { session: Session; top: number; height: number; column: number; columnCount: number; clippedStart: boolean; clippedEnd: boolean }`
+  - `interface PositionedSession { session: Session; top: number; height: number; column: number; columnCount: number; clippedEnd: boolean }`
   - `layoutDaySessions(sessions: Session[], range: PeriodRange): PositionedSession[]`
 
 - [ ] **Step 1: Write the failing test**
@@ -111,34 +111,19 @@ describe('layoutDaySessions — positions', () => {
 })
 
 describe('layoutDaySessions — troncature', () => {
-  it('tronque une session commencée avant la fenêtre', () => {
+  it('exclut une session dont le début précède la fenêtre, même si elle déborde dedans', () => {
     const before = { ...at('a', 0, 2), startedAt: DAY_START - HOUR }
-    const [block] = layoutDaySessions([before], RANGE)
-    expect(block.top).toBe(0)
-    expect(block.clippedStart).toBe(true)
-    expect(block.clippedEnd).toBe(false)
-    expect(block.height).toBeCloseTo(1 / 24)
+    expect(layoutDaySessions([before], RANGE)).toEqual([])
   })
 
   it('tronque une session qui déborde après la fenêtre', () => {
     const [block] = layoutDaySessions([at('a', 23, 3)], RANGE)
     expect(block.clippedEnd).toBe(true)
-    expect(block.clippedStart).toBe(false)
     expect(block.top + block.height).toBeCloseTo(1)
-  })
-
-  it('tronque des deux côtés une session qui couvre toute la fenêtre', () => {
-    const huge = { ...at('a', 0, 0), startedAt: DAY_START - HOUR, durationMs: 30 * HOUR }
-    const [block] = layoutDaySessions([huge], RANGE)
-    expect(block.clippedStart).toBe(true)
-    expect(block.clippedEnd).toBe(true)
-    expect(block.top).toBe(0)
-    expect(block.height).toBeCloseTo(1)
   })
 
   it('ne signale aucune troncature pour une session entièrement dedans', () => {
     const [block] = layoutDaySessions([at('a', 6, 1)], RANGE)
-    expect(block.clippedStart).toBe(false)
     expect(block.clippedEnd).toBe(false)
   })
 
@@ -153,10 +138,20 @@ describe('layoutDaySessions — troncature', () => {
   })
 
   it('borne top et height à l’intervalle [0, 1]', () => {
-    const huge = { ...at('a', 0, 0), startedAt: DAY_START - 10 * HOUR, durationMs: 50 * HOUR }
+    const huge = { ...at('a', 0, 0), durationMs: 50 * HOUR }
     const [block] = layoutDaySessions([huge], RANGE)
     expect(block.top).toBeGreaterThanOrEqual(0)
     expect(block.height).toBeLessThanOrEqual(1)
+  })
+
+  it('exclut une session commençant une milliseconde avant le début de la fenêtre', () => {
+    const justBefore = { ...at('a', 0, 1), startedAt: DAY_START - 1 }
+    expect(layoutDaySessions([justBefore], RANGE)).toEqual([])
+  })
+
+  it('inclut une session commençant exactement au début de la fenêtre', () => {
+    const [block] = layoutDaySessions([at('a', 0, 1)], RANGE)
+    expect(block.top).toBe(0)
   })
 })
 
@@ -255,7 +250,6 @@ export interface PositionedSession {
   column: number
   /** Nombre de colonnes du groupe, donc largeur = 1 / columnCount. */
   columnCount: number
-  clippedStart: boolean
   clippedEnd: boolean
 }
 
@@ -263,7 +257,6 @@ interface Bounded {
   session: Session
   start: number
   end: number
-  clippedStart: boolean
   clippedEnd: boolean
   column: number
 }
@@ -279,13 +272,12 @@ export function layoutDaySessions(
   for (const session of sessions) {
     const rawStart = session.startedAt
     const rawEnd = session.startedAt + session.durationMs
-    // Entièrement hors fenêtre : rien à dessiner.
-    if (rawEnd <= range.start || rawStart >= range.end) continue
+    // Une session appartient à la fenêtre qui contient son début : jamais dessinée ailleurs.
+    if (rawStart < range.start || rawStart >= range.end) continue
     bounded.push({
       session,
-      start: Math.max(rawStart, range.start),
+      start: rawStart,
       end: Math.min(rawEnd, range.end),
-      clippedStart: rawStart < range.start,
       clippedEnd: rawEnd > range.end,
       column: 0,
     })
@@ -308,7 +300,6 @@ export function layoutDaySessions(
         height: (b.end - b.start) / span,
         column: b.column,
         columnCount,
-        clippedStart: b.clippedStart,
         clippedEnd: b.clippedEnd,
       })
     }
@@ -341,12 +332,12 @@ export function layoutDaySessions(
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `rtk npx vitest run src/features/calendar/dayLayout.test.ts`
-Expected: PASS, 21 tests.
+Expected: PASS, 22 tests.
 
 - [ ] **Step 5: Run the full suite**
 
 Run: `rtk npm test`
-Expected: 159 tests au vert (138 + 21).
+Expected: 160 tests au vert (138 + 22).
 
 - [ ] **Step 6: Commit**
 
@@ -471,7 +462,7 @@ export function useDaySessions(uid: string | null, reference: number) {
 - [ ] **Step 2: Vérifier**
 
 Run: `rtk npx tsc -b && rtk npm test`
-Expected: aucune erreur de type, 159 tests au vert.
+Expected: aucune erreur de type, 160 tests au vert.
 
 - [ ] **Step 3: Commit**
 
@@ -506,7 +497,6 @@ Dans `src/i18n/fr.json`, ajouter un objet `calendar` à la racine :
   "noTask": "Sans tâche",
   "attachToTask": "Rattacher à une tâche",
   "emptyDay": "Aucune session ce jour-là.",
-  "continuesBefore": "Commencée la veille",
   "continuesAfter": "Se poursuit le lendemain",
   "attachFailed": "Rattachement impossible. Réessaie."
 }
@@ -523,7 +513,6 @@ Dans `src/i18n/en.json` :
   "noTask": "No task",
   "attachToTask": "Attach to a task",
   "emptyDay": "No session that day.",
-  "continuesBefore": "Started the day before",
   "continuesAfter": "Continues the next day",
   "attachFailed": "Could not attach. Try again."
 }
@@ -671,8 +660,8 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
                   type="button"
                   key={block.session.id}
                   className={`daygrid__block ${task ? '' : 'daygrid__block--orphan'} ${
-                    block.clippedStart ? 'daygrid__block--clipstart' : ''
-                  } ${block.clippedEnd ? 'daygrid__block--clipend' : ''}`}
+                    block.clippedEnd ? 'daygrid__block--clipend' : ''
+                  }`}
                   style={{
                     top: `${block.top * 100}%`,
                     height: `${block.height * 100}%`,
@@ -683,7 +672,6 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
                   }}
                   title={[
                     task ? task.title : t('calendar.noTask'),
-                    block.clippedStart ? t('calendar.continuesBefore') : '',
                     block.clippedEnd ? t('calendar.continuesAfter') : '',
                   ]
                     .filter(Boolean)
@@ -836,11 +824,6 @@ Créer `src/features/calendar/DayGrid.css` :
   border-style: dashed;
 }
 
-.daygrid__block--clipstart {
-  border-top-width: 3px;
-  border-top-style: double;
-}
-
 .daygrid__block--clipend {
   border-bottom-width: 3px;
   border-bottom-style: double;
@@ -894,7 +877,7 @@ Créer `src/features/calendar/DayGrid.css` :
 - [ ] **Step 4: Vérifier**
 
 Run: `rtk npx tsc -b && rtk npm test`
-Expected: aucune erreur de type, 159 tests au vert.
+Expected: aucune erreur de type, 160 tests au vert.
 
 - [ ] **Step 5: Commit**
 
@@ -1067,7 +1050,7 @@ Ajouter à la fin de `src/features/tasks/TasksScreen.css` — le titre suit le m
 - [ ] **Step 6: Vérifier**
 
 Run: `rtk npx tsc -b && rtk npm test`
-Expected: aucune erreur de type, 159 tests au vert. `noUnusedLocals` signalera tout import laissé orphelin.
+Expected: aucune erreur de type, 160 tests au vert. `noUnusedLocals` signalera tout import laissé orphelin.
 
 - [ ] **Step 7: Commit**
 
@@ -1084,7 +1067,7 @@ rtk git add src/features/tasks/TasksScreen.tsx src/features/tasks/TasksScreen.cs
 - [ ] **Step 1: Suite complète**
 
 Run: `rtk npm test`
-Expected: 159 tests au vert, sortie sans avertissement.
+Expected: 160 tests au vert, sortie sans avertissement.
 
 - [ ] **Step 2: Build de production**
 

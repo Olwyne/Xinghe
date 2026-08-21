@@ -10,7 +10,6 @@ export interface PositionedSession {
   column: number
   /** Nombre de colonnes du groupe, donc largeur = 1 / columnCount. */
   columnCount: number
-  clippedStart: boolean
   clippedEnd: boolean
 }
 
@@ -18,7 +17,6 @@ interface Bounded {
   session: Session
   start: number
   end: number
-  clippedStart: boolean
   clippedEnd: boolean
   column: number
 }
@@ -34,13 +32,12 @@ export function layoutDaySessions(
   for (const session of sessions) {
     const rawStart = session.startedAt
     const rawEnd = session.startedAt + session.durationMs
-    // Entièrement hors fenêtre : rien à dessiner.
-    if (rawEnd <= range.start || rawStart >= range.end) continue
+    // Une session appartient à la fenêtre qui contient son début : jamais dessinée ailleurs.
+    if (rawStart < range.start || rawStart >= range.end) continue
     bounded.push({
       session,
-      start: Math.max(rawStart, range.start),
+      start: rawStart,
       end: Math.min(rawEnd, range.end),
-      clippedStart: rawStart < range.start,
       clippedEnd: rawEnd > range.end,
       column: 0,
     })
@@ -63,7 +60,6 @@ export function layoutDaySessions(
         height: (b.end - b.start) / span,
         column: b.column,
         columnCount,
-        clippedStart: b.clippedStart,
         clippedEnd: b.clippedEnd,
       })
     }

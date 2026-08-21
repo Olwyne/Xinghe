@@ -45,34 +45,19 @@ describe('layoutDaySessions — positions', () => {
 })
 
 describe('layoutDaySessions — troncature', () => {
-  it("tronque une session commencée avant la fenêtre", () => {
+  it("exclut une session dont le début précède la fenêtre, même si elle déborde dedans", () => {
     const before = { ...at('a', 0, 2), startedAt: DAY_START - HOUR }
-    const [block] = layoutDaySessions([before], RANGE)
-    expect(block.top).toBe(0)
-    expect(block.clippedStart).toBe(true)
-    expect(block.clippedEnd).toBe(false)
-    expect(block.height).toBeCloseTo(1 / 24)
+    expect(layoutDaySessions([before], RANGE)).toEqual([])
   })
 
   it("tronque une session qui déborde après la fenêtre", () => {
     const [block] = layoutDaySessions([at('a', 23, 3)], RANGE)
     expect(block.clippedEnd).toBe(true)
-    expect(block.clippedStart).toBe(false)
     expect(block.top + block.height).toBeCloseTo(1)
-  })
-
-  it("tronque des deux côtés une session qui couvre toute la fenêtre", () => {
-    const huge = { ...at('a', 0, 0), startedAt: DAY_START - HOUR, durationMs: 30 * HOUR }
-    const [block] = layoutDaySessions([huge], RANGE)
-    expect(block.clippedStart).toBe(true)
-    expect(block.clippedEnd).toBe(true)
-    expect(block.top).toBe(0)
-    expect(block.height).toBeCloseTo(1)
   })
 
   it("ne signale aucune troncature pour une session entièrement dedans", () => {
     const [block] = layoutDaySessions([at('a', 6, 1)], RANGE)
-    expect(block.clippedStart).toBe(false)
     expect(block.clippedEnd).toBe(false)
   })
 
@@ -87,10 +72,20 @@ describe('layoutDaySessions — troncature', () => {
   })
 
   it("borne top et height à l'intervalle [0, 1]", () => {
-    const huge = { ...at('a', 0, 0), startedAt: DAY_START - 10 * HOUR, durationMs: 50 * HOUR }
+    const huge = { ...at('a', 0, 0), durationMs: 50 * HOUR }
     const [block] = layoutDaySessions([huge], RANGE)
     expect(block.top).toBeGreaterThanOrEqual(0)
     expect(block.height).toBeLessThanOrEqual(1)
+  })
+
+  it("exclut une session commençant une milliseconde avant le début de la fenêtre", () => {
+    const justBefore = { ...at('a', 0, 1), startedAt: DAY_START - 1 }
+    expect(layoutDaySessions([justBefore], RANGE)).toEqual([])
+  })
+
+  it("inclut une session commençant exactement au début de la fenêtre", () => {
+    const [block] = layoutDaySessions([at('a', 0, 1)], RANGE)
+    expect(block.top).toBe(0)
   })
 })
 

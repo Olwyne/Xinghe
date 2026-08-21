@@ -411,6 +411,7 @@ export function useDaySessions(uid: string | null, reference: number) {
     // Firebase configuré mais uid pas encore connu : on reste en chargement
     // plutôt que d'afficher une journée vide qui serait un mensonge.
     if (!uid || !db) {
+      setSessions([])
       setLoading(true)
       return
     }

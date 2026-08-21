@@ -41,9 +41,19 @@ export function useTaskSessions(uid: string | null, taskId: string | null) {
       return
     }
 
-    if (!isFirebaseConfigured || !uid || !db) {
+    if (!isFirebaseConfigured) {
       setSessions(loadLocal(taskId))
       setLoading(false)
+      return
+    }
+
+    if (!uid || !db) {
+      // Firebase is configured but auth hasn't resolved yet: stay in the
+      // loading state rather than falling back to localStorage, which would
+      // show an empty state (nothing is stored there in a Firebase
+      // deployment) and could route a stray write to the wrong store.
+      setSessions([])
+      setLoading(true)
       return
     }
 
@@ -71,15 +81,19 @@ export function useTaskSessions(uid: string | null, taskId: string | null) {
   const addEntry = useCallback(
     async (draft: TimeEntryDraft, projectId: string) => {
       if (!taskId) return
+      const startedAt = draftToStartedAt(draft)
+      const durationMs = draft.durationMinutes * 60_000
       const entry: Omit<Session, 'id'> = {
         projectId,
         taskId,
-        startedAt: draftToStartedAt(draft),
-        durationMs: draft.durationMinutes * 60_000,
+        startedAt,
+        durationMs,
+        endedAt: startedAt + durationMs,
         type: 'focus',
         origin: 'manual',
       }
-      if (isFirebaseConfigured && uid && db) {
+      if (isFirebaseConfigured) {
+        if (!uid || !db) throw new Error('auth not ready')
         await addDoc(collection(db, 'users', uid, 'sessions'), entry)
       } else {
         const all = getStore<Session[]>(LS_KEY, [])
@@ -95,12 +109,16 @@ export function useTaskSessions(uid: string | null, taskId: string | null) {
     async (id: string, draft: TimeEntryDraft) => {
       // origin n'est pas touché : une session mesurée puis corrigée reste
       // marquée 'timer', editedAt dit qu'elle a été retouchée.
+      const startedAt = draftToStartedAt(draft)
+      const durationMs = draft.durationMinutes * 60_000
       const updates = {
-        startedAt: draftToStartedAt(draft),
-        durationMs: draft.durationMinutes * 60_000,
+        startedAt,
+        durationMs,
+        endedAt: startedAt + durationMs,
         editedAt: Date.now(),
       }
-      if (isFirebaseConfigured && uid && db) {
+      if (isFirebaseConfigured) {
+        if (!uid || !db) throw new Error('auth not ready')
         await updateDoc(doc(db, 'users', uid, 'sessions', id), updates)
       } else {
         const all = getStore<Session[]>(LS_KEY, [])
@@ -114,7 +132,8 @@ export function useTaskSessions(uid: string | null, taskId: string | null) {
 
   const deleteEntry = useCallback(
     async (id: string) => {
-      if (isFirebaseConfigured && uid && db) {
+      if (isFirebaseConfigured) {
+        if (!uid || !db) throw new Error('auth not ready')
         await deleteDoc(doc(db, 'users', uid, 'sessions', id))
       } else {
         const all = getStore<Session[]>(LS_KEY, [])

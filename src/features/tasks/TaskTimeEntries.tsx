@@ -84,12 +84,14 @@ export function TaskTimeEntries({ task }: { task: Task }) {
   function openNew() {
     setDraft(emptyDraft())
     setSaveFailed(false)
+    setConfirmingDelete(null)
     setEditing('new')
   }
 
   function openEdit(session: Session) {
     setDraft(sessionToDraft(session))
     setSaveFailed(false)
+    setConfirmingDelete(null)
     setEditing(session.id)
   }
 
@@ -212,9 +214,18 @@ export function TaskTimeEntries({ task }: { task: Task }) {
                   {s.editedAt && <span title={t('tasks.edited')}>✎</span>}
                 </span>
                 {confirmingDelete === s.id ? (
-                  <button type="button" className="tte__confirm" onClick={() => remove(s.id)}>
-                    {t('tasks.confirmDeleteEntry')}
-                  </button>
+                  <>
+                    <button type="button" className="tte__confirm" onClick={() => remove(s.id)}>
+                      {t('tasks.confirmDeleteEntry')}
+                    </button>
+                    <button
+                      type="button"
+                      className="tte__cancel"
+                      onClick={() => setConfirmingDelete(null)}
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  </>
                 ) : (
                   <>
                     <button type="button" className="tte__edit" onClick={() => openEdit(s)}>

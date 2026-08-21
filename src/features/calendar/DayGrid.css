@@ -1,0 +1,153 @@
+.daygrid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  flex: 1;
+}
+
+.daygrid__nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.daygrid__navbtn,
+.daygrid__today {
+  padding: 4px 10px;
+  border: 1px solid var(--xh-card-border);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.daygrid__today {
+  margin-left: auto;
+}
+
+.daygrid__date {
+  font-size: 0.9rem;
+}
+
+.daygrid__error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--xh-focus);
+}
+
+.daygrid__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.daygrid__ruler {
+  width: 56px;
+  flex-shrink: 0;
+}
+
+.daygrid__hour {
+  height: 48px;
+  position: relative;
+}
+
+.daygrid__hourlabel {
+  position: absolute;
+  top: -6px;
+  right: 8px;
+  font-size: 0.68rem;
+  opacity: 0.55;
+  font-variant-numeric: tabular-nums;
+}
+
+.daygrid__canvas {
+  position: relative;
+  flex: 1;
+  border-left: 1px solid var(--xh-card-border);
+}
+
+.daygrid__line {
+  height: 48px;
+  border-bottom: 1px solid var(--xh-card-border);
+  opacity: 0.4;
+}
+
+.daygrid__now {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--xh-focus);
+  opacity: 0.8;
+}
+
+.daygrid__block {
+  position: absolute;
+  min-height: 14px;
+  padding: 2px 6px;
+  border: 1px solid;
+  border-radius: 4px;
+  color: #0b0d2a;
+  font-size: 0.7rem;
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.daygrid__block--orphan {
+  color: inherit;
+  border-style: dashed;
+}
+
+.daygrid__block--clipend {
+  border-bottom-width: 3px;
+  border-bottom-style: double;
+}
+
+.daygrid__blocktitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daygrid__blockicon {
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+.daygrid__skeleton {
+  position: absolute;
+  left: 0;
+  width: 60%;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.daygrid__empty {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  margin: 0;
+  font-size: 0.78rem;
+  opacity: 0.5;
+}
+
+.daygrid__attach {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--xh-card-border);
+  border-radius: 8px;
+}
+
+.daygrid__attachlabel {
+  font-size: 0.78rem;
+  opacity: 0.7;
+}

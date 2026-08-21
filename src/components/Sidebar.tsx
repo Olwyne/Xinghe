@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { ConnectivityIndicator } from './ConnectivityIndicator'
 import './Sidebar.css'
 
-export type DesktopTab = 'timer' | 'tasks' | 'matrix' | 'goals' | 'stats' | 'settings'
+export type DesktopTab = 'timer' | 'tasks' | 'matrix' | 'day' | 'goals' | 'stats' | 'settings'
 
 interface SidebarProps {
   active: DesktopTab
@@ -13,6 +13,7 @@ const NAV_ITEMS: { key: DesktopTab; labelKey: string }[] = [
   { key: 'timer', labelKey: 'nav.timer' },
   { key: 'tasks', labelKey: 'nav.tasks' },
   { key: 'matrix', labelKey: 'matrix' },
+  { key: 'day', labelKey: 'calendar.day' },
   { key: 'goals', labelKey: 'nav.goals' },
   { key: 'stats', labelKey: 'nav.stats' },
   { key: 'settings', labelKey: 'settings' },

@@ -68,7 +68,6 @@
     "fieldDueDate": "Due date",
     "fieldSubtasks": "Subtasks",
     "subtaskPlaceholder": "Add a subtask…",
-    "timeSpent": "{{minutes}} min of focus recorded",
     "fieldNotes": "Notes",
     "notesPlaceholder": "Add notes…"
   },

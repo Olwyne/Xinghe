@@ -68,7 +68,6 @@
     "fieldDueDate": "Échéance",
     "fieldSubtasks": "Sous-tâches",
     "subtaskPlaceholder": "Ajouter une sous-tâche…",
-    "timeSpent": "{{minutes}} min de focus enregistrées",
     "fieldNotes": "Notes",
     "notesPlaceholder": "Ajouter des notes…"
   },

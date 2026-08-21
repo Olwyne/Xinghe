@@ -41,9 +41,10 @@
 - `src/features/goals/types.ts` — `Session` gagne `origin` et `editedAt`
 - `src/hooks/useTodaySessions.ts` — `recordSession` écrit `origin: 'timer'`
 - `src/features/timer/TimerScreen.tsx` — n'incrémente plus `Task.spentMs`
+- `src/features/tasks/TaskModal.tsx` — suppression du bloc stale `spentMs` (tâche 1), puis montage de `<TaskTimeEntries>` (tâche 5)
+- `src/features/tasks/TaskModal.css` — suppression de la règle `.tm-time`
 - `src/hooks/useTasks.ts` — un changement de projet réaffecte les sessions de la tâche
-- `src/features/tasks/TaskModal.tsx` — la section remplace l'affichage en lecture seule
-- `src/i18n/fr.json`, `src/i18n/en.json` — clés `tasks.*` de la section
+- `src/i18n/fr.json`, `src/i18n/en.json` — suppression de `tasks.timeSpent` (tâche 1), puis clés `tasks.*` de la section (tâche 5)
 
 ---
 
@@ -95,15 +96,58 @@ Dans `src/features/timer/TimerScreen.tsx`, remplacer le corps de `onFocusComplet
 
 Le temps de la tâche se calcule désormais depuis ses sessions ; l'accumulateur `Task.spentMs` n'est plus une source de vérité. Si `updateTask` ou `uid` ne sont plus utilisés ailleurs dans le fichier après cette suppression, retirer aussi leur récupération — `noUnusedLocals` le signalera.
 
-- [ ] **Step 4: Vérifier**
+- [ ] **Step 4: Retirer l'affichage stale de `spentMs` du modal**
+
+Dans `src/features/tasks/TaskModal.tsx`, supprimer le bloc aux lignes 223-227 :
+
+```tsx
+        {!!task?.spentMs && task.spentMs > 0 && (
+          <div className="tm-time">
+            {t('tasks.timeSpent', { minutes: Math.round(task.spentMs / 60000) })}
+          </div>
+        )}
+```
+
+Jusqu'à ce que la section des temps passés arrive, cet emplacement reste vide ; il sera occupé par `<TaskTimeEntries task={task} />` en tâche 5.
+
+- [ ] **Step 5: Retirer la clé i18n devenue orpheline**
+
+Dans `src/i18n/fr.json` et `src/i18n/en.json`, supprimer la ligne `"timeSpent": …` du bloc `tasks`. Avant la suppression, vérifier qu'elle n'est utilisée nulle part :
+
+```bash
+rtk grep -rn "tasks.timeSpent" src
+```
+
+Expected: aucun résultat.
+
+- [ ] **Step 6: Retirer la règle CSS devenue orpheline**
+
+Dans `src/features/tasks/TaskModal.css`, vérifier que `.tm-time` n'est utilisé que par le bloc qu'on vient de supprimer :
+
+```bash
+rtk grep -rn "tm-time" src
+```
+
+Expected: une seule occurrence dans `TaskModal.tsx` qui sera supprimée, et une dans le CSS à retirer.
+
+Supprimer les lignes 218-221 :
+
+```css
+.tm-time {
+  font-size: var(--xh-text-sm);
+  color: var(--xh-text-faint);
+}
+```
+
+- [ ] **Step 7: Vérifier**
 
 Run: `rtk npx tsc -b && rtk npm test`
 Expected: aucune erreur de type, 106 tests au vert.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-rtk git add src/features/goals/types.ts src/hooks/useTodaySessions.ts src/features/timer/TimerScreen.tsx && rtk git commit -m "feat: mark timer sessions with an origin, stop writing Task.spentMs"
+rtk git add src/features/goals/types.ts src/hooks/useTodaySessions.ts src/features/timer/TimerScreen.tsx src/features/tasks/TaskModal.tsx src/features/tasks/TaskModal.css src/i18n/fr.json src/i18n/en.json && rtk git commit -m "feat: mark timer sessions with an origin, stop writing Task.spentMs"
 ```
 
 ---
@@ -956,7 +1000,7 @@ Dans `src/features/tasks/TaskModal.tsx`, ajouter l'import :
 import { TaskTimeEntries } from './TaskTimeEntries'
 ```
 
-et remplacer le bloc `{!!task?.spentMs && task.spentMs > 0 && (…)}` par :
+Le bloc `{!!task?.spentMs && task.spentMs > 0 && (…)}` a déjà été supprimé en tâche 1. Monter la nouvelle section à la même place (entre la section des sous-tâches et les boutons d'action) :
 
 ```tsx
         {task && <TaskTimeEntries task={task} />}

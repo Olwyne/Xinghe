@@ -61,6 +61,7 @@ export function useTodaySessions(uid: string | null) {
         durationMs,
         endedAt: Date.now(),
         type: 'focus',
+        origin: 'timer',
       }
 
       if (isFirebaseConfigured && uid && db) {

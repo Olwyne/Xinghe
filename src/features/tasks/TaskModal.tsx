@@ -220,12 +220,6 @@ export function TaskModal({
           </div>
         </div>
 
-        {!!task?.spentMs && task.spentMs > 0 && (
-          <div className="tm-time">
-            {t('tasks.timeSpent', { minutes: Math.round(task.spentMs / 60000) })}
-          </div>
-        )}
-
         <div className="tm-actions">
           {onDelete && (
             <button type="button" className="tm-actions__delete" onClick={onDelete}>

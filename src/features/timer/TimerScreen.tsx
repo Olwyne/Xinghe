@@ -44,12 +44,8 @@ export function TimerScreen({ isDesktop }: TimerScreenProps) {
     async (ms: number, startedAt: number) => {
       const pid = selectedTask?.projectId ?? 'inbox'
       await recordSession(pid, ms, startedAt, selectedTaskId ?? undefined)
-      // Accumulate spent time on the task
-      if (selectedTask && uid) {
-        await updateTask(selectedTask.id, { spentMs: (selectedTask.spentMs ?? 0) + ms })
-      }
     },
-    [recordSession, selectedTask, selectedTaskId, uid, updateTask],
+    [recordSession, selectedTask, selectedTaskId],
   )
 
   const { state, remaining, progress, start, pause, stop, skip, continueToNext } =

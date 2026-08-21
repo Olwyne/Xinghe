@@ -27,3 +27,6 @@ dist-ssr
 
 # SDD process artifacts
 sdd/
+
+# Visual brainstorming mockups
+.superpowers/

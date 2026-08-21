@@ -585,6 +585,7 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
   // gaspillage. Se coupe au changement de jour et au démontage.
   useEffect(() => {
     if (!showNowLine) return
+    setNow(Date.now())
     const id = setInterval(() => setNow(Date.now()), 60_000)
     return () => clearInterval(id)
   }, [showNowLine, range.start, range.end])
@@ -734,7 +735,6 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
     </section>
   )
 }
-
 ```
 
 Le composant ne calcule aucune géométrie : il consomme `top`, `height`, `column` et `columnCount` produits par la tâche 1. Le plancher de hauteur d'un bloc très court est une règle CSS (`min-height` à l'étape suivante), pas un calcul.

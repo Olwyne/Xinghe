@@ -59,6 +59,7 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
   // gaspillage. Se coupe au changement de jour et au démontage.
   useEffect(() => {
     if (!showNowLine) return
+    setNow(Date.now())
     const id = setInterval(() => setNow(Date.now()), 60_000)
     return () => clearInterval(id)
   }, [showNowLine, range.start, range.end])

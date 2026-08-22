@@ -124,6 +124,18 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
     return () => window.removeEventListener('keydown', onKey)
   }, [dragging])
 
+  // Le bloc tiré peut disparaître en cours de geste (ex. suppression distante
+  // pendant qu'un doigt reste posé) : la capture du pointeur saute alors
+  // implicitement et le pointerup qui suit ne nous parvient plus, laissant
+  // `dragging` bloqué indéfiniment (Minor B). On referme dès que l'id suivi
+  // n'est plus dans la liste.
+  useEffect(() => {
+    if (!dragging) return
+    if (!plannedBlocks.some((block) => block.id === dragging.id)) {
+      setDragging(null)
+    }
+  }, [dragging, plannedBlocks])
+
   function navigate(next: number) {
     // Repartir sans panneau ni message d'échec : ils pointent sur une session
     // qui n'est plus à l'écran une fois qu'on a changé de jour.
@@ -131,6 +143,12 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
     setAttachFailed(false)
     setBlockFailed(false)
     setPanel(null)
+    // Filet de récupération pour un glisser resté bloqué (ex. le bloc tiré a
+    // disparu en cours de geste, son pointerup a retargeté sur le couloir
+    // sans handler et n'a jamais nettoyé l'état) : changer de jour est le
+    // seul point de sortie garanti, autant y remettre `dragging` à zéro
+    // (Minor B).
+    setDragging(null)
     setReference(next)
   }
 
@@ -311,6 +329,15 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
               <div
                 className="daygrid__lane daygrid__lane--planned"
                 ref={plannedLaneRef}
+                onPointerDown={() => {
+                  // Un geste qui démarre sur un bloc a déjà stoppé la
+                  // propagation avant d'arriver ici : ceci ne concerne que
+                  // les gestes qui commencent sur le couloir vide. Sans ça,
+                  // le drapeau laissé `true` par un glisser tactile juste
+                  // terminé sur un bloc avale le tap suivant sur le couloir
+                  // vide (Important A).
+                  draggedRef.current = false
+                }}
                 onClick={(e) => {
                   // Un clic sur un bloc existant ne doit pas aussi créer : les
                   // blocs arrêtent la propagation eux-mêmes (Task 8). Mais si

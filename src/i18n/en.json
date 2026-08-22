@@ -169,5 +169,16 @@
     "targetTooSmall": "The target must be at least one minute.",
     "overAllocated": "Your targets add up to {{total}} per day, above your global goal of {{global}}.",
     "empty": "No project has a time target yet. Add one from project management."
+  },
+  "calendar": {
+    "day": "Day",
+    "today": "Today",
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "noTask": "No task",
+    "attachToTask": "Attach to a task",
+    "emptyDay": "No session that day.",
+    "continuesAfter": "Continues the next day",
+    "attachFailed": "Could not attach. Try again."
   }
 }

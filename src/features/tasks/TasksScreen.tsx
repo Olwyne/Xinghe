@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useProjects } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
 import { MatrixScreen } from '@/features/matrix/MatrixScreen'
+import { DayGrid } from '@/features/calendar/DayGrid'
 import { ProjectSelector } from './ProjectSelector'
 import { ProjectModal } from './ProjectModal'
 import { TaskList } from './TaskList'
@@ -11,7 +12,7 @@ import { TaskModal, type TaskDraft } from './TaskModal'
 import type { Task } from './types'
 import './TasksScreen.css'
 
-type TasksView = 'list' | 'matrix'
+type TasksView = 'list' | 'matrix' | 'day'
 
 export function TasksScreen() {
   const { t } = useTranslation()
@@ -82,6 +83,12 @@ export function TasksScreen() {
           >
             {t('tasks.viewMatrix')}
           </button>
+          <button
+            className={`tasks-toggle__btn ${view === 'day' ? 'tasks-toggle__btn--active' : ''}`}
+            onClick={() => setView('day')}
+          >
+            {t('calendar.day')}
+          </button>
         </div>
       </div>
 
@@ -110,6 +117,12 @@ export function TasksScreen() {
       {view === 'matrix' && (
         <div className="tasks-screen__matrix">
           <MatrixScreen />
+        </div>
+      )}
+
+      {view === 'day' && (
+        <div className="tasks-screen__day">
+          <DayGrid onOpenTask={(task) => setOpenTask(task)} />
         </div>
       )}
 

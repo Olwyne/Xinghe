@@ -56,7 +56,7 @@
 **Interfaces:**
 - Consumes: `Session` de `@/features/goals/types`, `PeriodRange` de `@/lib/time`
 - Produces:
-  - `interface PositionedSession { session: Session; top: number; height: number; column: number; columnCount: number; clippedStart: boolean; clippedEnd: boolean }`
+  - `interface PositionedSession { session: Session; top: number; height: number; column: number; columnCount: number; clippedEnd: boolean }`
   - `layoutDaySessions(sessions: Session[], range: PeriodRange): PositionedSession[]`
 
 - [ ] **Step 1: Write the failing test**
@@ -111,34 +111,19 @@ describe('layoutDaySessions — positions', () => {
 })
 
 describe('layoutDaySessions — troncature', () => {
-  it('tronque une session commencée avant la fenêtre', () => {
+  it('exclut une session dont le début précède la fenêtre, même si elle déborde dedans', () => {
     const before = { ...at('a', 0, 2), startedAt: DAY_START - HOUR }
-    const [block] = layoutDaySessions([before], RANGE)
-    expect(block.top).toBe(0)
-    expect(block.clippedStart).toBe(true)
-    expect(block.clippedEnd).toBe(false)
-    expect(block.height).toBeCloseTo(1 / 24)
+    expect(layoutDaySessions([before], RANGE)).toEqual([])
   })
 
   it('tronque une session qui déborde après la fenêtre', () => {
     const [block] = layoutDaySessions([at('a', 23, 3)], RANGE)
     expect(block.clippedEnd).toBe(true)
-    expect(block.clippedStart).toBe(false)
     expect(block.top + block.height).toBeCloseTo(1)
-  })
-
-  it('tronque des deux côtés une session qui couvre toute la fenêtre', () => {
-    const huge = { ...at('a', 0, 0), startedAt: DAY_START - HOUR, durationMs: 30 * HOUR }
-    const [block] = layoutDaySessions([huge], RANGE)
-    expect(block.clippedStart).toBe(true)
-    expect(block.clippedEnd).toBe(true)
-    expect(block.top).toBe(0)
-    expect(block.height).toBeCloseTo(1)
   })
 
   it('ne signale aucune troncature pour une session entièrement dedans', () => {
     const [block] = layoutDaySessions([at('a', 6, 1)], RANGE)
-    expect(block.clippedStart).toBe(false)
     expect(block.clippedEnd).toBe(false)
   })
 
@@ -153,10 +138,20 @@ describe('layoutDaySessions — troncature', () => {
   })
 
   it('borne top et height à l’intervalle [0, 1]', () => {
-    const huge = { ...at('a', 0, 0), startedAt: DAY_START - 10 * HOUR, durationMs: 50 * HOUR }
+    const huge = { ...at('a', 0, 0), durationMs: 50 * HOUR }
     const [block] = layoutDaySessions([huge], RANGE)
     expect(block.top).toBeGreaterThanOrEqual(0)
     expect(block.height).toBeLessThanOrEqual(1)
+  })
+
+  it('exclut une session commençant une milliseconde avant le début de la fenêtre', () => {
+    const justBefore = { ...at('a', 0, 1), startedAt: DAY_START - 1 }
+    expect(layoutDaySessions([justBefore], RANGE)).toEqual([])
+  })
+
+  it('inclut une session commençant exactement au début de la fenêtre', () => {
+    const [block] = layoutDaySessions([at('a', 0, 1)], RANGE)
+    expect(block.top).toBe(0)
   })
 })
 
@@ -255,7 +250,6 @@ export interface PositionedSession {
   column: number
   /** Nombre de colonnes du groupe, donc largeur = 1 / columnCount. */
   columnCount: number
-  clippedStart: boolean
   clippedEnd: boolean
 }
 
@@ -263,7 +257,6 @@ interface Bounded {
   session: Session
   start: number
   end: number
-  clippedStart: boolean
   clippedEnd: boolean
   column: number
 }
@@ -279,13 +272,12 @@ export function layoutDaySessions(
   for (const session of sessions) {
     const rawStart = session.startedAt
     const rawEnd = session.startedAt + session.durationMs
-    // Entièrement hors fenêtre : rien à dessiner.
-    if (rawEnd <= range.start || rawStart >= range.end) continue
+    // Une session appartient à la fenêtre qui contient son début : jamais dessinée ailleurs.
+    if (rawStart < range.start || rawStart >= range.end) continue
     bounded.push({
       session,
-      start: Math.max(rawStart, range.start),
+      start: rawStart,
       end: Math.min(rawEnd, range.end),
-      clippedStart: rawStart < range.start,
       clippedEnd: rawEnd > range.end,
       column: 0,
     })
@@ -308,7 +300,6 @@ export function layoutDaySessions(
         height: (b.end - b.start) / span,
         column: b.column,
         columnCount,
-        clippedStart: b.clippedStart,
         clippedEnd: b.clippedEnd,
       })
     }
@@ -341,12 +332,20 @@ export function layoutDaySessions(
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `rtk npx vitest run src/features/calendar/dayLayout.test.ts`
-Expected: PASS, 21 tests.
+Expected: PASS, 22 tests.
 
 - [ ] **Step 5: Run the full suite**
 
 Run: `rtk npm test`
-Expected: 159 tests au vert (138 + 21).
+Expected: 160 tests au vert (138 + 22).
+
+**Amendements post-revue (pré-merge) — trois trous dans la suite de tests :**
+
+1. Le test bornage `[0, 1]` ne vérifiait que `top >= 0` et `height <= 1` sur une session commençant exactement au bord de la fenêtre : `top` y vaut 0 par construction, donc `top >= 0` était une tautologie qu'une implémentation cassée aurait aussi satisfaite. Réécrit avec une session qui démarre après le début réel de la fenêtre et déborde très largement après la fin (`durationMs: 50 * HOUR`), et les quatre bornes (`top >= 0`, `top <= 1`, `height >= 0`, `height <= 1`) sont désormais asserées.
+2. La suite ne couvrait qu'une fenêtre de 23h (`dayStart` un jour de retour à l'heure d'hiver). Ajouté le cas complémentaire, une fenêtre de 25h (passage à l'heure d'été) : une session entièrement à l'intérieur (24h-25h) doit garder `top`/`height` proportionnels à 25h et ne pas être marquée `clippedEnd`. C'est le cas qu'un clamp naïf sur un dénominateur fixe de 24h tronquerait à tort.
+3. Le test « pas de plancher de hauteur » ne portait que sur une session de 30 secondes isolée, sans voisine. Ajouté un test où cette session de 30 secondes est insérée dans un groupe où deux sessions se chevauchent déjà (a: 0h-1h, b: 0h30-2h) — à un instant (1h06) où la colonne de `a` vient de se libérer. L'implémentation correcte réutilise cette colonne (`columnCount` reste 2 pour a, b et la session minuscule, `column` de la minuscule vaut 0) ; un plancher de durée qui gonflerait sa fin manquerait cette réutilisation et pousserait `columnCount` à 3.
+
+Ces trois ajouts portent la suite du module à 25 tests (22 + 3), et 162 au total (160 + 2 nets — un des trois est une réécriture de test existant, pas un ajout).
 
 - [ ] **Step 6: Commit**
 
@@ -420,6 +419,7 @@ export function useDaySessions(uid: string | null, reference: number) {
     // Firebase configuré mais uid pas encore connu : on reste en chargement
     // plutôt que d'afficher une journée vide qui serait un mensonge.
     if (!uid || !db) {
+      setSessions([])
       setLoading(true)
       return
     }
@@ -471,13 +471,18 @@ export function useDaySessions(uid: string | null, reference: number) {
 - [ ] **Step 2: Vérifier**
 
 Run: `rtk npx tsc -b && rtk npm test`
-Expected: aucune erreur de type, 159 tests au vert.
+Expected: aucune erreur de type, 160 tests au vert.
 
 - [ ] **Step 3: Commit**
 
 ```bash
 rtk git add src/hooks/useDaySessions.ts && rtk git commit -m "feat: add useDaySessions hook"
 ```
+
+**Amendements post-revue (pré-merge) :**
+
+1. `attachToTask` gardait `if (isFirebaseConfigured && uid && db)` et retombait sinon en `localStorage`, y compris quand Firebase est configuré mais que `uid` n'a pas encore résolu — un déploiement Firebase pouvait alors écrire en local, une écriture jamais lue nulle part. `src/hooks/useTaskSessions.ts` avait déjà ce garde correct pour ses propres écritures : la branche est désormais sur `isFirebaseConfigured` seul, avec un `throw new Error('auth not ready')` quand `uid` ou `db` manque, à charge de l'appelant (`DayGrid`, via `handleSelect` → `attachFailed`) de l'afficher comme un échec de rattachement ordinaire.
+2. Sous `localStorage`, `useDaySessions` fait une lecture ponctuelle à chaque changement de `reference`/`dayStart`, pas un abonnement : la grille ne voit pas une édition faite ailleurs (le formulaire de temps de la tâche, par exemple) tant que le jour affiché ne change pas. C'est un trait de famille de tous les hooks de session en `localStorage` du projet (`useTaskSessions` a le même effet) — laissé tel quel, mais désormais documenté par un commentaire dans le hook plutôt que silencieux.
 
 ---
 
@@ -506,7 +511,6 @@ Dans `src/i18n/fr.json`, ajouter un objet `calendar` à la racine :
   "noTask": "Sans tâche",
   "attachToTask": "Rattacher à une tâche",
   "emptyDay": "Aucune session ce jour-là.",
-  "continuesBefore": "Commencée la veille",
   "continuesAfter": "Se poursuit le lendemain",
   "attachFailed": "Rattachement impossible. Réessaie."
 }
@@ -523,7 +527,6 @@ Dans `src/i18n/en.json` :
   "noTask": "No task",
   "attachToTask": "Attach to a task",
   "emptyDay": "No session that day.",
-  "continuesBefore": "Started the day before",
   "continuesAfter": "Continues the next day",
   "attachFailed": "Could not attach. Try again."
 }
@@ -534,7 +537,7 @@ Dans `src/i18n/en.json` :
 Créer `src/features/calendar/DayGrid.tsx` :
 
 ```tsx
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useTasks } from '@/hooks/useTasks'
@@ -564,6 +567,7 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
 
   const [attaching, setAttaching] = useState<string | null>(null)
   const [attachFailed, setAttachFailed] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
 
   const projectColors = useMemo(
     () => Object.fromEntries(projects.map((p) => [p.id, p.color])),
@@ -586,14 +590,39 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
     minute: '2-digit',
   })
 
-  const now = Date.now()
   const showNowLine = now >= range.start && now < range.end
   const nowTop = ((now - range.start) / (range.end - range.start)) * 100
+
+  // Ne tourne que si le jour affiché est aujourd'hui : la ligne "now" n'est
+  // rendue que dans ce cas, donc un intervalle sur un autre jour serait pur
+  // gaspillage. Se coupe au changement de jour et au démontage.
+  useEffect(() => {
+    if (!showNowLine) return
+    setNow(Date.now())
+    const id = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [showNowLine, range.start, range.end])
+
+  function navigate(next: number) {
+    // Repartir sans panneau ni message d'échec : ils pointent sur une session
+    // qui n'est plus à l'écran une fois qu'on a changé de jour.
+    setAttaching(null)
+    setAttachFailed(false)
+    setReference(next)
+  }
+
+  function openAttach(sessionId: string) {
+    // Repartir sans message d'échec : celui d'une tentative précédente ne doit
+    // pas s'accrocher à une session différente, ni à une réouverture du panneau.
+    setAttachFailed(false)
+    setAttaching(sessionId)
+  }
 
   async function handleSelect(sessionId: string, taskId: string | null) {
     const task = taskId ? tasksById.get(taskId) : null
     if (!task) {
       setAttaching(null)
+      setAttachFailed(false)
       return
     }
     try {
@@ -612,7 +641,7 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
           type="button"
           className="daygrid__navbtn"
           aria-label={t('calendar.previousDay')}
-          onClick={() => setReference((r) => r - 24 * HOUR)}
+          onClick={() => navigate(reference - 24 * HOUR)}
         >
           ‹
         </button>
@@ -621,14 +650,14 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
           type="button"
           className="daygrid__navbtn"
           aria-label={t('calendar.nextDay')}
-          onClick={() => setReference((r) => r + 24 * HOUR)}
+          onClick={() => navigate(reference + 24 * HOUR)}
         >
           ›
         </button>
         <button
           type="button"
           className="daygrid__today"
-          onClick={() => setReference(Date.now())}
+          onClick={() => navigate(Date.now())}
         >
           {t('calendar.today')}
         </button>
@@ -671,8 +700,8 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
                   type="button"
                   key={block.session.id}
                   className={`daygrid__block ${task ? '' : 'daygrid__block--orphan'} ${
-                    block.clippedStart ? 'daygrid__block--clipstart' : ''
-                  } ${block.clippedEnd ? 'daygrid__block--clipend' : ''}`}
+                    block.clippedEnd ? 'daygrid__block--clipend' : ''
+                  }`}
                   style={{
                     top: `${block.top * 100}%`,
                     height: `${block.height * 100}%`,
@@ -683,14 +712,13 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
                   }}
                   title={[
                     task ? task.title : t('calendar.noTask'),
-                    block.clippedStart ? t('calendar.continuesBefore') : '',
                     block.clippedEnd ? t('calendar.continuesAfter') : '',
                   ]
                     .filter(Boolean)
                     .join(' · ')}
                   onClick={() => {
                     if (task) onOpenTask(task)
-                    else setAttaching(block.session.id)
+                    else openAttach(block.session.id)
                   }}
                 >
                   <span className="daygrid__blocktitle">
@@ -836,11 +864,6 @@ Créer `src/features/calendar/DayGrid.css` :
   border-style: dashed;
 }
 
-.daygrid__block--clipstart {
-  border-top-width: 3px;
-  border-top-style: double;
-}
-
 .daygrid__block--clipend {
   border-bottom-width: 3px;
   border-bottom-style: double;
@@ -894,13 +917,19 @@ Créer `src/features/calendar/DayGrid.css` :
 - [ ] **Step 4: Vérifier**
 
 Run: `rtk npx tsc -b && rtk npm test`
-Expected: aucune erreur de type, 159 tests au vert.
+Expected: aucune erreur de type, 160 tests au vert.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 rtk git add src/features/calendar/DayGrid.tsx src/features/calendar/DayGrid.css src/i18n/fr.json src/i18n/en.json && rtk git commit -m "feat: add the day grid component"
 ```
+
+**Amendements post-revue (pré-merge) :**
+
+1. `DayGrid` déstructurait `tasks` de `useTasks(uid, 'all')` sans son `loading`, et le squelette n'était posé que sur `loading` d'`useDaySessions`. Les deux abonnements résolvent indépendamment : dans la fenêtre où les sessions sont arrivées mais où la carte des tâches est encore vide, tous les blocs se peignaient en pointillés « Sans tâche » — y compris ceux déjà rattachés — et un tap dedans ouvrait le panneau de rattachement sur une session qui ne l'était pas, prêt à écraser un `taskId` valide au premier choix. `DayGrid` prend maintenant `loading` des deux hooks (`sessionsLoading`, `tasksLoading`) et n'affiche les blocs que quand les deux sont résolus.
+2. La navigation avançait/reculait de `± 24 * HOUR` depuis `reference`. `src/hooks/useWeekSessions.ts` documente déjà pourquoi c'est fragile : un pas fixe en millisecondes peut, autour d'un changement d'heure, retomber dans le jour d'avant celui visé et rendre un jour inatteignable. La navigation part désormais du bord de la fenêtre affichée, pas de `reference` : jour précédent = `range.start - 12 * HOUR`, jour suivant = `range.end + 12 * HOUR` — la moitié d'une fenêtre voisine atterrit toujours dedans quelle que soit sa durée réelle (23h, 24h ou 25h). `navigate()` reste le seul point qui réinitialise le panneau de rattachement et son erreur ; « aujourd'hui » reste `Date.now()`.
+3. `color: #0b0d2a` sur `.daygrid__block` était la seule couleur brute en dur du fichier, sans explication. Commentée : les couleurs de projet sont un ensemble fermé de huit pastels clairs (`src/features/tasks/constants.ts`), donc ce texte sombre est accordé à cette palette plutôt qu'au thème clair/sombre de l'appli — pas un oubli de token.
 
 ---
 
@@ -952,6 +981,10 @@ et le rendu de la vue, après le bloc `{view === 'matrix' && …}` :
 ```
 
 `setOpenTask` est l'état que l'écran utilise déjà pour son `TaskModal` : la grille délègue donc l'édition au modal existant sans le dupliquer.
+
+**Amendement post-revue (pré-merge) — critique :** ce branchement rend accessible un défaut de `useTasks.ts` qu'une revue antérieure (sous-projet A, tâche 3) avait qualifié d'« inatteignable par les appelants d'alors » et laissé volontairement en l'état. Il l'est devenu ici : `TasksScreen` tient `useTasks(uid, selectedId)` — une liste de tâches **filtrée par projet** — et c'est son `TaskModal` (via `setOpenTask`, ligne 978) qui reçoit la tâche cliquée dans la grille. Or `DayGrid` lit ses tâches avec `useTasks(uid, 'all')`, donc un clic dans la vue Jour peut ouvrir le modal sur une tâche absente de la liste filtrée de `TasksScreen`, si un autre projet que « tous » est sélectionné dans la barre latérale. `updateTask` (dans `useTasks.ts`) calculait `movesProject` à partir de `tasks.find((t) => t.id === id)` : pour une tâche absente de sa propre liste, `current` valait `undefined`, donc `movesProject` restait `false` même quand `updates.projectId` change réellement — le batch qui réaffecte les sessions de la tâche à son nouveau projet ne partait jamais, et seul le document de la tâche était écrit. Le temps déjà enregistré restait compté dans les objectifs de l'ancien projet, silencieusement et sans retour possible (la comparaison redevient égale après coup).
+
+Corrigé dans `updateTask` lui-même, pas dans les écrans : quand `updates.projectId` est fourni et que la tâche est absente de la liste du hook, son `projectId` réel est résolu avant de conclure — en Firestore par une lecture ponctuelle `getDoc(docRef(uid, id))`, en `localStorage` par une recherche dans la liste complète stockée (`getStore<Task[]>(LS_KEY, [])`), pas dans la liste filtrée `tasks`. L'ordre des écritures ne change pas : les sessions sont toujours réaffectées avant que le document de la tâche soit écrit, pour la même raison de reprise sur échec déjà établie ailleurs (une écriture de sessions qui échoue laisse `movesProject` vrai au prochain essai). `reassignSessions` (`src/features/tasks/timeEntry.ts`) reste la seule implémentation de la réaffectation, et la signature de `updateTask` ne change pas.
 
 - [ ] **Step 2: Ajouter le style du conteneur**
 
@@ -1016,12 +1049,19 @@ export function DayScreen() {
   const { user } = useAuth()
   const uid = user?.uid ?? null
   const { projects } = useProjects(uid)
-  const { updateTask } = useTasks(uid, 'all')
+  const { updateTask, deleteTask } = useTasks(uid, 'all')
   const [openTask, setOpenTask] = useState<Task | null>(null)
 
   async function handleSave(draft: TaskDraft) {
     if (!openTask) return
     await updateTask(openTask.id, draft)
+    setOpenTask(null)
+  }
+
+  async function handleDeleteOpenTask() {
+    if (openTask) {
+      await deleteTask(openTask.id)
+    }
     setOpenTask(null)
   }
 
@@ -1036,6 +1076,7 @@ export function DayScreen() {
           projects={projects}
           defaultProjectId={openTask.projectId}
           onSave={handleSave}
+          onDelete={handleDeleteOpenTask}
           onClose={() => setOpenTask(null)}
         />
       )}
@@ -1067,13 +1108,15 @@ Ajouter à la fin de `src/features/tasks/TasksScreen.css` — le titre suit le m
 - [ ] **Step 6: Vérifier**
 
 Run: `rtk npx tsc -b && rtk npm test`
-Expected: aucune erreur de type, 159 tests au vert. `noUnusedLocals` signalera tout import laissé orphelin.
+Expected: aucune erreur de type, 160 tests au vert. `noUnusedLocals` signalera tout import laissé orphelin.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 rtk git add src/features/tasks/TasksScreen.tsx src/features/tasks/TasksScreen.css src/features/calendar/DayScreen.tsx src/components/Sidebar.tsx src/App.tsx && rtk git commit -m "feat: reach the day grid from the tasks screen and the sidebar"
 ```
+
+**Amendement post-revue (pré-merge) :** `.day-screen` et `.day-screen__title` ci-dessus avaient été ajoutées à `src/features/tasks/TasksScreen.css`, comme écrit dans ce plan — mais `DayScreen.tsx` n'importe pas ce fichier. Il ne s'affichait correctement que parce qu'`App.tsx` importe `TasksScreen` de façon statique, donc le CSS finissait de toute façon dans le bundle d'entrée ; le jour où l'un des deux écrans passe en import différé, ces deux règles disparaissent du bundle qui charge `DayScreen`. Déplacées dans `src/features/calendar/DayGrid.css`, que `DayScreen` importe déjà indirectement (il rend toujours `DayGrid`), plutôt que de faire importer un fichier à `DayScreen` lui-même.
 
 ---
 
@@ -1084,7 +1127,7 @@ rtk git add src/features/tasks/TasksScreen.tsx src/features/tasks/TasksScreen.cs
 - [ ] **Step 1: Suite complète**
 
 Run: `rtk npm test`
-Expected: 159 tests au vert, sortie sans avertissement.
+Expected (post-revue) : 162 tests au vert (160 + 2 nets ajoutés en revue pré-merge — voir l'amendement de la tâche 1 : trois assertions ajoutées/réécrites dans `dayLayout.test.ts`, dont une réécriture d'un test existant).
 
 - [ ] **Step 2: Build de production**
 

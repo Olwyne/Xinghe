@@ -82,3 +82,12 @@
 .tasks-screen__new:hover {
   background: var(--xh-card-hover);
 }
+
+.tasks-screen__day {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 0 16px 16px;
+}
+

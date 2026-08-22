@@ -169,5 +169,16 @@
     "targetTooSmall": "La cible doit être d'au moins une minute.",
     "overAllocated": "Tes objectifs cumulent {{total}} par jour, au-delà de ton objectif global de {{global}}.",
     "empty": "Aucun projet n'a encore d'objectif de temps. Ajoutes-en un depuis la gestion des projets."
+  },
+  "calendar": {
+    "day": "Jour",
+    "today": "Aujourd'hui",
+    "previousDay": "Jour précédent",
+    "nextDay": "Jour suivant",
+    "noTask": "Sans tâche",
+    "attachToTask": "Rattacher à une tâche",
+    "emptyDay": "Aucune session ce jour-là.",
+    "continuesAfter": "Se poursuit le lendemain",
+    "attachFailed": "Rattachement impossible. Réessaie."
   }
 }

@@ -8,6 +8,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   where,
   writeBatch,
@@ -100,12 +101,23 @@ export function useTasks(uid: string | null, projectId: string) {
   const updateTask = useCallback(
     async (id: string, updates: Partial<Omit<Task, 'id'>>) => {
       const current = tasks.find((t) => t.id === id)
-      const movesProject =
-        updates.projectId !== undefined &&
-        current !== undefined &&
-        updates.projectId !== current.projectId
 
       if (isFirebaseConfigured && uid && db) {
+        // `tasks` est filtré par projet (useTasks(uid, selectedId)) : une
+        // tâche ouverte depuis la grille du jour (qui lit `useTasks(uid,
+        // 'all')`) peut appartenir à un autre projet que celui sélectionné
+        // et donc être absente d'ici. "absente" ne veut pas dire "ne bouge
+        // pas de projet" : on va lire son projectId réel avant de conclure.
+        let currentProjectId = current?.projectId
+        if (currentProjectId === undefined && updates.projectId !== undefined) {
+          const snap = await getDoc(docRef(uid, id))
+          currentProjectId = snap.exists() ? (snap.data() as Task).projectId : undefined
+        }
+        const movesProject =
+          updates.projectId !== undefined &&
+          currentProjectId !== undefined &&
+          updates.projectId !== currentProjectId
+
         // Réaffecter les sessions AVANT d'écrire la tâche : si ce deuxième
         // write échoue en premier, la tâche garde son ancien projectId et
         // `movesProject` reste vrai au prochain essai, donc l'utilisateur
@@ -127,6 +139,20 @@ export function useTasks(uid: string | null, projectId: string) {
         }
         await updateDoc(docRef(uid, id), updates)
       } else {
+        // Même raisonnement qu'en Firestore : `tasks` (filtré par projet)
+        // peut ne pas contenir la tâche alors qu'elle existe bien dans le
+        // stockage local complet. On y cherche son projectId réel avant de
+        // décider si elle change de projet.
+        let currentProjectId = current?.projectId
+        if (currentProjectId === undefined && updates.projectId !== undefined) {
+          const all = getStore<Task[]>(LS_KEY, [])
+          currentProjectId = all.find((t) => t.id === id)?.projectId
+        }
+        const movesProject =
+          updates.projectId !== undefined &&
+          currentProjectId !== undefined &&
+          updates.projectId !== currentProjectId
+
         // Même ordre et même raison qu'en Firestore : réaffecter les
         // sessions d'abord pour qu'un échec de la mise à jour de la tâche
         // laisse `movesProject` vrai au prochain essai, plutôt que de

@@ -55,11 +55,20 @@ describe('dragToStart', () => {
   })
 
   it("accroche sur la grille de la fenêtre, pas sur l'époque", () => {
-    // Un début décalé de 7 min doit retomber sur un quart d'heure compté
-    // depuis le début de la fenêtre, quelle que soit l'heure de celui-ci.
-    const originalStart = DAY_START + 6 * HOUR + 7 * MINUTE
-    const result = dragToStart({ ...base, originalStart, deltaPx: 0 })
-    expect((result - RANGE.start) % SNAP_STEP_MS).toBe(0)
+    // Le début de la fenêtre est volontairement décalé de 5 min par rapport à
+    // l'époque (DAY_START, un multiple de 900 000 ms) : avec une fenêtre
+    // alignée sur l'époque, un accrochage relatif à l'époque et un
+    // accrochage relatif à la fenêtre tombent sur la même grille et le test
+    // ne distinguerait pas les deux implémentations. Décalée, seule la
+    // version qui accroche depuis `range.start` retombe sur la grille de la
+    // fenêtre.
+    const offGridRange: PeriodRange = {
+      start: DAY_START + 5 * MINUTE,
+      end: DAY_START + 5 * MINUTE + 24 * HOUR,
+    }
+    const originalStart = offGridRange.start + 6 * HOUR + 7 * MINUTE
+    const result = dragToStart({ ...base, range: offGridRange, originalStart, deltaPx: 0 })
+    expect((result - offGridRange.start) % SNAP_STEP_MS).toBe(0)
   })
 
   it("borne le début au début de la fenêtre", () => {

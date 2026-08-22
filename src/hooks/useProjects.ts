@@ -17,6 +17,8 @@ import { INBOX_DEFAULTS } from '@/features/tasks/constants'
 import type { Project } from '@/features/tasks/types'
 import type { Session } from '@/features/goals/types'
 import { reassignSessions } from '@/features/tasks/timeEntry'
+import { reassignBlocksOfProject } from '@/features/calendar/blockCascades'
+import type { PlannedBlock } from '@/features/calendar/types'
 
 const LS_KEY = 'xinghe-projects'
 
@@ -159,12 +161,14 @@ export function useProjects(uid: string | null) {
         // Le temps suit la tâche : les sessions du projet supprimé doivent
         // migrer vers l'inbox dans le même batch que les tâches, sinon elles
         // resteraient orphelines sur un projectId mort.
-        const [tasksSnap, sessionsSnap] = await Promise.all([
+        const [tasksSnap, sessionsSnap, blocksSnap] = await Promise.all([
           getDocs(query(collection(db, `users/${uid}/tasks`), where('projectId', '==', id))),
           getDocs(query(collection(db, `users/${uid}/sessions`), where('projectId', '==', id))),
+          getDocs(query(collection(db, `users/${uid}/blocks`), where('projectId', '==', id))),
         ])
         const batch = writeBatch(db)
         sessionsSnap.docs.forEach((d) => batch.update(d.ref, { projectId: inbox.id }))
+        blocksSnap.docs.forEach((d) => batch.update(d.ref, { projectId: inbox.id }))
         tasksSnap.docs.forEach((d) => batch.update(d.ref, { projectId: inbox.id }))
         batch.delete(docRef(uid, id))
         await batch.commit()
@@ -183,6 +187,11 @@ export function useProjects(uid: string | null) {
           sessions,
         )
         setStore('xinghe-sessions', nextSessions)
+        // Même ordre que les sessions : réaffecter avant de déplacer les
+        // tâches, pour qu'une interruption laisse un état que la reprise
+        // corrige au lieu de blocs sur un projet mort.
+        const blocks = getStore<PlannedBlock[]>('xinghe-blocks', [])
+        setStore('xinghe-blocks', reassignBlocksOfProject(blocks, id, inbox.id))
         setStore(
           'xinghe-tasks',
           tasks.map((t) => (t.projectId === id ? { ...t, projectId: inbox.id } : t)),

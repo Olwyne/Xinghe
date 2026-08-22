@@ -6,7 +6,6 @@ import {
   onSnapshot,
   addDoc,
   updateDoc,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -18,6 +17,8 @@ import { getStore, setStore } from '@/lib/localStore'
 import type { Task, Quadrant } from '@/features/tasks/types'
 import type { Session } from '@/features/goals/types'
 import { reassignSessions } from '@/features/tasks/timeEntry'
+import { removeBlocksOfTask, reassignBlocksOfTask } from '@/features/calendar/blockCascades'
+import type { PlannedBlock } from '@/features/calendar/types'
 
 const LS_KEY = 'xinghe-tasks'
 
@@ -127,13 +128,17 @@ export function useTasks(uid: string | null, projectId: string) {
         // sur l'ancien projet.
         if (movesProject) {
           // Le temps déjà enregistré suit la tâche, sinon il resterait
-          // compté dans les objectifs de son ancien projet.
-          const snap = await getDocs(
-            query(collection(db, `users/${uid}/sessions`), where('taskId', '==', id)),
-          )
-          if (!snap.empty) {
+          // compté dans les objectifs de son ancien projet. Les blocs
+          // planifiés portent le même projectId et suivent pour la même
+          // raison : le prévu et le réel doivent pointer le même projet.
+          const [sessionsSnap, blocksSnap] = await Promise.all([
+            getDocs(query(collection(db, `users/${uid}/sessions`), where('taskId', '==', id))),
+            getDocs(query(collection(db, `users/${uid}/blocks`), where('taskId', '==', id))),
+          ])
+          if (!sessionsSnap.empty || !blocksSnap.empty) {
             const batch = writeBatch(db)
-            snap.docs.forEach((d) => batch.update(d.ref, { projectId: updates.projectId }))
+            sessionsSnap.docs.forEach((d) => batch.update(d.ref, { projectId: updates.projectId }))
+            blocksSnap.docs.forEach((d) => batch.update(d.ref, { projectId: updates.projectId }))
             await batch.commit()
           }
         }
@@ -160,6 +165,8 @@ export function useTasks(uid: string | null, projectId: string) {
         if (movesProject) {
           const sessions = getStore<Session[]>('xinghe-sessions', [])
           setStore('xinghe-sessions', reassignSessions(sessions, id, updates.projectId!))
+          const blocks = getStore<PlannedBlock[]>('xinghe-blocks', [])
+          setStore('xinghe-blocks', reassignBlocksOfTask(blocks, id, updates.projectId!))
         }
         persist((all) => all.map((t) => (t.id === id ? { ...t, ...updates } : t)))
       }
@@ -187,8 +194,21 @@ export function useTasks(uid: string | null, projectId: string) {
   const deleteTask = useCallback(
     async (id: string) => {
       if (isFirebaseConfigured && uid && db) {
-        await deleteDoc(docRef(uid, id))
+        // Les blocs partent avec la tâche, dans le même batch : une intention
+        // orpheline polluerait le couloir « prévu » sans être corrigeable.
+        const blocksSnap = await getDocs(
+          query(collection(db, `users/${uid}/blocks`), where('taskId', '==', id)),
+        )
+        const batch = writeBatch(db)
+        blocksSnap.docs.forEach((d) => batch.delete(d.ref))
+        batch.delete(docRef(uid, id))
+        await batch.commit()
       } else {
+        const blocks = getStore<PlannedBlock[]>('xinghe-blocks', [])
+        // Les blocs d'abord : si l'écriture s'interrompt entre les deux, la
+        // tâche existe encore et une reprise refera le travail — l'inverse
+        // laisserait des blocs sur une tâche morte.
+        setStore('xinghe-blocks', removeBlocksOfTask(blocks, id))
         persist((all) => all.filter((t) => t.id !== id))
       }
     },

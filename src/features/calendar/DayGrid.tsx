@@ -8,12 +8,15 @@ import { useDayBlocks } from '@/hooks/useDayBlocks'
 import { useTimerSettings } from '@/hooks/useTimerSettings'
 import { TaskPicker } from '@/features/timer/TaskPicker'
 import { BlockPanel, type BlockPanelMode } from './BlockPanel'
-import { snapToStep, clampStartToRange, SNAP_STEP_MS } from './blockDrag'
+import { snapToStep, clampStartToRange, dragToStart, SNAP_STEP_MS } from './blockDrag'
 import { layoutDaySessions, layoutSpans } from './dayLayout'
 import type { Task } from '@/features/tasks/types'
+import type { PlannedBlock } from './types'
 import './DayGrid.css'
 
 const HOUR = 3_600_000
+/** En deçà, le geste reste un appui et le panneau s'ouvre. */
+const DRAG_THRESHOLD_PX = 4
 
 interface DayGridProps {
   /** Ouvre le modal d'une tâche : toute l'édition d'une session y vit déjà. */
@@ -32,6 +35,7 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
     blocks: plannedBlocks,
     loading: blocksLoading,
     addBlock,
+    moveBlock,
     updateBlock,
     removeBlock,
   } = useDayBlocks(uid, reference)
@@ -41,6 +45,7 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
 
   const [attaching, setAttaching] = useState<string | null>(null)
   const [attachFailed, setAttachFailed] = useState(false)
+  const [blockFailed, setBlockFailed] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const [panel, setPanel] = useState<BlockPanelMode | null>(null)
   // Un slot vide n'a pas d'identité propre (contrairement à un bloc, keyé sur
@@ -49,6 +54,17 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
   // clic hérite du brouillon et de l'erreur laissés par le premier panneau.
   const [createSeq, setCreateSeq] = useState(0)
   const plannedLaneRef = useRef<HTMLDivElement | null>(null)
+  /** Vrai entre la fin d'un glisser et le clic que le navigateur émet ensuite. */
+  const draggedRef = useRef(false)
+
+  /** Bloc en cours de glisser : `start` est la position fantôme, jamais écrite. */
+  const [dragging, setDragging] = useState<{
+    id: string
+    originalStart: number
+    pointerY: number
+    start: number
+    moved: boolean
+  } | null>(null)
 
   const projectColors = useMemo(
     () => Object.fromEntries(projects.map((p) => [p.id, p.color])),
@@ -90,13 +106,83 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
     return () => clearInterval(id)
   }, [showNowLine, range.start, range.end])
 
+  // Échap annule un glisser en cours. Monté seulement pendant le geste :
+  // aucun écouteur global ne traîne quand la grille est au repos.
+  useEffect(() => {
+    if (!dragging) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setDragging(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [dragging])
+
   function navigate(next: number) {
     // Repartir sans panneau ni message d'échec : ils pointent sur une session
     // qui n'est plus à l'écran une fois qu'on a changé de jour.
     setAttaching(null)
     setAttachFailed(false)
+    setBlockFailed(false)
     setPanel(null)
     setReference(next)
+  }
+
+  /** Pixels par milliseconde, mesuré sur le couloir réel : les jours de 23 ou
+      25 heures n'ont pas la même échelle qu'un jour ordinaire. */
+  function lanePxPerMs(): number {
+    const rect = plannedLaneRef.current?.getBoundingClientRect()
+    if (!rect || rect.height <= 0) return 0
+    return rect.height / (range.end - range.start)
+  }
+
+  function handleBlockPointerDown(e: React.PointerEvent, block: PlannedBlock) {
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setDragging({
+      id: block.id,
+      originalStart: block.startedAt,
+      pointerY: e.clientY,
+      start: block.startedAt,
+      moved: false,
+    })
+  }
+
+  function handleBlockPointerMove(e: React.PointerEvent) {
+    setDragging((prev) => {
+      if (!prev) return prev
+      const deltaPx = e.clientY - prev.pointerY
+      // Sous le seuil, le geste reste un appui : c'est ce qui laisse le tap
+      // ouvrir le panneau.
+      if (!prev.moved && Math.abs(deltaPx) < DRAG_THRESHOLD_PX) return prev
+      const start = dragToStart({
+        originalStart: prev.originalStart,
+        deltaPx,
+        pxPerMs: lanePxPerMs(),
+        range,
+        stepMs: SNAP_STEP_MS,
+      })
+      return { ...prev, start, moved: true }
+    })
+  }
+
+  async function handleBlockPointerUp(e: React.PointerEvent, block: PlannedBlock) {
+    e.stopPropagation()
+    const current = dragging
+    setDragging(null)
+    // Pas de glisser, ou retour au point de départ : c'est un appui, le clic
+    // suivant ouvrira le panneau.
+    if (!current || !current.moved || current.start === current.originalStart) return
+    draggedRef.current = true
+    try {
+      await moveBlock(block.id, current.start)
+    } catch {
+      setBlockFailed(true)
+    }
+  }
+
+  function handleBlockPointerCancel() {
+    // Annulation système ou Échap : retour à la position d'origine, sans écriture.
+    setDragging(null)
   }
 
   function openAttach(sessionId: string) {
@@ -157,6 +243,7 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
       </div>
 
       {attachFailed && <p className="daygrid__error">{t('calendar.attachFailed')}</p>}
+      {blockFailed && <p className="daygrid__error">{t('calendar.blockFailed')}</p>}
 
       <div className="daygrid__body">
         <div className="daygrid__ruler">
@@ -222,23 +309,40 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
                   const task = tasksById.get(block.taskId)
                   const color = projectColors[block.projectId] ?? 'var(--xh-text-faint)'
                   const width = 100 / positioned.columnCount
+                  const ghost = dragging?.id === block.id && dragging.moved ? dragging.start : null
+                  const shownTop =
+                    ghost === null
+                      ? positioned.top
+                      : (ghost - range.start) / (range.end - range.start)
                   return (
                     <button
                       type="button"
                       key={block.id}
                       className={`daygrid__planned ${
                         positioned.clippedEnd ? 'daygrid__block--clipend' : ''
-                      } ${task?.completed ? 'daygrid__planned--done' : ''}`}
+                      } ${task?.completed ? 'daygrid__planned--done' : ''} ${
+                        ghost !== null ? 'daygrid__planned--dragging' : ''
+                      }`}
                       style={{
-                        top: `${positioned.top * 100}%`,
+                        top: `${shownTop * 100}%`,
                         height: `${positioned.height * 100}%`,
                         left: `${positioned.column * width}%`,
                         width: `${width}%`,
                         borderColor: color,
                         color,
                       }}
+                      onPointerDown={(e) => handleBlockPointerDown(e, block)}
+                      onPointerMove={handleBlockPointerMove}
+                      onPointerUp={(e) => handleBlockPointerUp(e, block)}
+                      onPointerCancel={handleBlockPointerCancel}
                       onClick={(e) => {
                         e.stopPropagation()
+                        // Un glisser vient de se terminer : ne pas ouvrir le panneau
+                        // par-dessus le déplacement que l'utilisateur voulait.
+                        if (draggedRef.current) {
+                          draggedRef.current = false
+                          return
+                        }
                         setPanel({ kind: 'edit', block })
                       }}
                     >

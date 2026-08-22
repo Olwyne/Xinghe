@@ -233,6 +233,9 @@
   display: flex;
   align-items: flex-start;
   gap: 4px;
+  /* Le glisser vertical doit rester à l'app : sans cela, le navigateur
+     interprète le geste comme un défilement et le bloc ne suit pas. */
+  touch-action: none;
 }
 
 /* Sélecteur composé : sa spécificité (deux classes) dépasse celle de
@@ -246,6 +249,11 @@
 
 .daygrid__planned--done {
   opacity: 0.45;
+}
+
+.daygrid__planned--dragging {
+  opacity: 0.75;
+  border-style: solid;
 }
 
 .daygrid__attach {

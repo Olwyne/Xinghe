@@ -1,0 +1,97 @@
+.blockpanel {
+  border: 1px solid var(--xh-card-border);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.blockpanel__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blockpanel__title {
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.blockpanel__close {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.blockpanel__task {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.blockpanel__fields {
+  display: flex;
+  gap: 10px;
+}
+
+.blockpanel__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.blockpanel__field input {
+  background: transparent;
+  border: 1px solid var(--xh-card-border);
+  border-radius: 6px;
+  color: inherit;
+  padding: 4px 6px;
+  font-size: 0.8rem;
+}
+
+.blockpanel__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.blockpanel__actions button {
+  padding: 4px 10px;
+  border: 1px solid var(--xh-card-border);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.blockpanel__actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.blockpanel__danger {
+  margin-left: auto;
+  color: var(--xh-focus);
+}
+
+/* Armé, le groupe [Confirmer, Annuler] remplace le seul bouton Supprimer.
+   Confirmer est rendu en premier et hérite de .blockpanel__danger (donc du
+   même margin-left: auto) : c'est lui qui absorbe l'espace avant le groupe,
+   pas le bord droit. Annuler, sans marge, suit immédiatement après et
+   termine la ligne — il atterrit donc exactement où était Supprimer. Un
+   double-clic aux mêmes coordonnées tombe sur Annuler, jamais sur une
+   seconde confirmation. */
+.blockpanel__cancel {
+  margin-left: 0;
+}
+
+.blockpanel__error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--xh-focus);
+}

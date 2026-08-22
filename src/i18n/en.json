@@ -177,8 +177,18 @@
     "nextDay": "Next day",
     "noTask": "No task",
     "attachToTask": "Attach to a task",
-    "emptyDay": "No session that day.",
+    "emptyDay": "Nothing here yet — plan a block or start a session.",
     "continuesAfter": "Continues the next day",
-    "attachFailed": "Could not attach. Try again."
+    "attachFailed": "Could not attach. Try again.",
+    "planned": "planned",
+    "actual": "actual",
+    "newBlock": "Plan a slot",
+    "editBlock": "Planned slot",
+    "blockStart": "Start",
+    "blockDuration": "Duration (min)",
+    "startTimer": "Start",
+    "confirmDelete": "Confirm?",
+    "blockFailed": "Could not save.",
+    "blockOutOfRange": "That time doesn't belong to the day shown."
   }
 }

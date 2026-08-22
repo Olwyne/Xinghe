@@ -177,8 +177,18 @@
     "nextDay": "Jour suivant",
     "noTask": "Sans tâche",
     "attachToTask": "Rattacher à une tâche",
-    "emptyDay": "Aucune session ce jour-là.",
+    "emptyDay": "Rien de prévu ni de fait pour l'instant.",
     "continuesAfter": "Se poursuit le lendemain",
-    "attachFailed": "Rattachement impossible. Réessaie."
+    "attachFailed": "Rattachement impossible. Réessaie.",
+    "planned": "prévu",
+    "actual": "réel",
+    "newBlock": "Planifier un créneau",
+    "editBlock": "Créneau planifié",
+    "blockStart": "Début",
+    "blockDuration": "Durée (min)",
+    "startTimer": "Démarrer",
+    "confirmDelete": "Confirmer ?",
+    "blockFailed": "Échec de l'enregistrement.",
+    "blockOutOfRange": "Ce créneau n'appartient pas au jour affiché."
   }
 }

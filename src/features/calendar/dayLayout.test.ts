@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { Session } from '@/features/goals/types'
 import type { PeriodRange } from '@/lib/time'
-import { layoutDaySessions } from './dayLayout'
+import { layoutDaySessions, layoutSpans } from './dayLayout'
 
 const HOUR = 3_600_000
 const DAY_START = new Date(2026, 2, 10, 4).getTime() // 10 mars 2026, 4h locales
@@ -193,5 +193,36 @@ describe('layoutDaySessions — ordre', () => {
     const first = layoutDaySessions([at('b', 6, 1), at('a', 6, 1)], RANGE)
     const second = layoutDaySessions([at('a', 6, 1), at('b', 6, 1)], RANGE)
     expect(first.map((x) => x.session.id)).toEqual(second.map((x) => x.session.id))
+  })
+})
+
+describe('layoutSpans — générique', () => {
+  it('place un objet qui n\'est pas une Session', () => {
+    const block = { id: 'b1', startedAt: DAY_START + 6 * HOUR, durationMs: 2 * HOUR, taskId: 't1' }
+    const [positioned] = layoutSpans([block], RANGE)
+    expect(positioned.item.taskId).toBe('t1')
+    expect(positioned.top).toBeCloseTo(6 / 24)
+    expect(positioned.height).toBeCloseTo(2 / 24)
+  })
+
+  it('deux appels indépendants ne partagent jamais de colonne', () => {
+    // Le prévu et le réel se recouvrent dans le temps mais vivent dans deux
+    // couloirs : chacun doit occuper toute la largeur du sien.
+    const planned = { id: 'p', startedAt: DAY_START + 6 * HOUR, durationMs: 2 * HOUR }
+    const actual = { id: 'a', startedAt: DAY_START + 6 * HOUR, durationMs: HOUR }
+    const [left] = layoutSpans([planned], RANGE)
+    const [right] = layoutSpans([actual], RANGE)
+    expect(left.column).toBe(0)
+    expect(left.columnCount).toBe(1)
+    expect(right.column).toBe(0)
+    expect(right.columnCount).toBe(1)
+  })
+
+  it('garde le découpage en colonnes à l\'intérieur d\'un même appel', () => {
+    const a = { id: 'a', startedAt: DAY_START + 6 * HOUR, durationMs: 2 * HOUR }
+    const b = { id: 'b', startedAt: DAY_START + 7 * HOUR, durationMs: 2 * HOUR }
+    const positioned = layoutSpans([a, b], RANGE)
+    expect(positioned.map((p) => p.column)).toEqual([0, 1])
+    expect(positioned.every((p) => p.columnCount === 2)).toBe(true)
   })
 })

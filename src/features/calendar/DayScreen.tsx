@@ -7,7 +7,11 @@ import { TaskModal, type TaskDraft } from '@/features/tasks/TaskModal'
 import { DayGrid } from './DayGrid'
 import type { Task } from '@/features/tasks/types'
 
-export function DayScreen() {
+interface DayScreenProps {
+  onStartTimer: (taskId: string) => void
+}
+
+export function DayScreen({ onStartTimer }: DayScreenProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const uid = user?.uid ?? null
@@ -31,7 +35,7 @@ export function DayScreen() {
   return (
     <div className="day-screen">
       <h1 className="day-screen__title">{t('calendar.day')}</h1>
-      <DayGrid onOpenTask={(task) => setOpenTask(task)} />
+      <DayGrid onOpenTask={(task) => setOpenTask(task)} onStartTimer={onStartTimer} />
 
       {openTask && (
         <TaskModal

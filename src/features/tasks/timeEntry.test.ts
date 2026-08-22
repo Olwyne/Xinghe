@@ -228,3 +228,33 @@ describe('reassignSessions', () => {
     expect(result[0]).not.toBe(target)
   })
 })
+
+describe('validateEntry — allowFuture', () => {
+  const now = new Date(2026, 2, 10, 12).getTime()
+  const future: TimeEntryDraft = {
+    day: new Date(2026, 2, 11).getTime(),
+    startMinutes: 9 * 60,
+    durationMinutes: 50,
+  }
+
+  it('refuse un début futur par défaut', () => {
+    expect(validateEntry(future, now)).toBe('starts-in-future')
+  })
+
+  it('accepte un début futur quand allowFuture est vrai', () => {
+    expect(validateEntry(future, now, { allowFuture: true })).toBeNull()
+  })
+
+  it('refuse toujours une heure vidée, même avec allowFuture', () => {
+    // Un champ date ou heure vidé produit NaN : sans cette garde, l'entrée
+    // s'écrirait avec un startedAt NaN, invisible de tout lecteur filtré
+    // par plage. C'est la corruption silencieuse rattrapée au sous-projet B.
+    const broken: TimeEntryDraft = { ...future, startMinutes: NaN }
+    expect(validateEntry(broken, now, { allowFuture: true })).toBe('invalid-time')
+  })
+
+  it('refuse toujours une durée nulle, même avec allowFuture', () => {
+    const broken: TimeEntryDraft = { ...future, durationMinutes: 0 }
+    expect(validateEntry(broken, now, { allowFuture: true })).toBe('duration-too-short')
+  })
+})

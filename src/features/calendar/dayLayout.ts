@@ -1,8 +1,15 @@
 import type { Session } from '@/features/goals/types'
 import type { PeriodRange } from '@/lib/time'
 
-export interface PositionedSession {
-  session: Session
+/** Le minimum pour être placé sur la grille : un identifiant et un intervalle. */
+export interface Span {
+  id: string
+  startedAt: number
+  durationMs: number
+}
+
+export interface Positioned<T> {
+  item: T
   /** Fraction de la fenêtre : 0 = début de la grille, 1 = fin. */
   top: number
   height: number
@@ -13,29 +20,45 @@ export interface PositionedSession {
   clippedEnd: boolean
 }
 
-interface Bounded {
+export interface PositionedSession {
   session: Session
+  top: number
+  height: number
+  column: number
+  columnCount: number
+  clippedEnd: boolean
+}
+
+interface Bounded<T> {
+  item: T
   start: number
   end: number
   clippedEnd: boolean
   column: number
 }
 
-export function layoutDaySessions(
-  sessions: Session[],
+/**
+ * Dispose des intervalles sur une fenêtre.
+ *
+ * Générique parce que la grille tient deux couloirs — les sessions mesurées
+ * et les blocs planifiés — disposés par deux appels séparés : deux objets de
+ * couloirs différents ne doivent jamais se partager une colonne.
+ */
+export function layoutSpans<T extends Span>(
+  items: T[],
   range: PeriodRange,
-): PositionedSession[] {
+): Positioned<T>[] {
   const span = range.end - range.start
   if (span <= 0) return []
 
-  const bounded: Bounded[] = []
-  for (const session of sessions) {
-    const rawStart = session.startedAt
-    const rawEnd = session.startedAt + session.durationMs
-    // Une session appartient à la fenêtre qui contient son début : jamais dessinée ailleurs.
+  const bounded: Bounded<T>[] = []
+  for (const item of items) {
+    const rawStart = item.startedAt
+    const rawEnd = item.startedAt + item.durationMs
+    // Un objet appartient à la fenêtre qui contient son début : jamais dessiné ailleurs.
     if (rawStart < range.start || rawStart >= range.end) continue
     bounded.push({
-      session,
+      item,
       start: rawStart,
       end: Math.min(rawEnd, range.end),
       clippedEnd: rawEnd > range.end,
@@ -44,18 +67,18 @@ export function layoutDaySessions(
   }
 
   // Tri par début, départagé par id pour que deux appels donnent le même ordre.
-  bounded.sort((a, b) => a.start - b.start || a.session.id.localeCompare(b.session.id))
+  bounded.sort((a, b) => a.start - b.start || a.item.id.localeCompare(b.item.id))
 
-  const result: PositionedSession[] = []
-  let group: Bounded[] = []
-  /** Fin de la dernière session placée dans chaque colonne du groupe courant. */
+  const result: Positioned<T>[] = []
+  let group: Bounded<T>[] = []
+  /** Fin du dernier objet placé dans chaque colonne du groupe courant. */
   let columnEnds: number[] = []
 
   function flushGroup() {
     const columnCount = columnEnds.length
     for (const b of group) {
       result.push({
-        session: b.session,
+        item: b.item,
         top: (b.start - range.start) / span,
         height: (b.end - b.start) / span,
         column: b.column,
@@ -69,7 +92,10 @@ export function layoutDaySessions(
 
   for (const b of bounded) {
     // Un groupe se ferme quand plus aucune de ses colonnes n'est encore occupée.
-    const groupEnd = columnEnds.length ? Math.max(...columnEnds) : -Infinity
+    let groupEnd = -Infinity
+    for (const end of columnEnds) {
+      if (end > groupEnd) groupEnd = end
+    }
     if (b.start >= groupEnd) flushGroup()
 
     let column = columnEnds.findIndex((end) => end <= b.start)
@@ -86,4 +112,15 @@ export function layoutDaySessions(
   flushGroup()
 
   return result
+}
+
+/** Enveloppe historique : même disposition, l'objet placé s'appelle `session`. */
+export function layoutDaySessions(
+  sessions: Session[],
+  range: PeriodRange,
+): PositionedSession[] {
+  return layoutSpans(sessions, range).map(({ item, ...rest }) => ({
+    session: item,
+    ...rest,
+  }))
 }

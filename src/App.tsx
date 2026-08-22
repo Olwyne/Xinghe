@@ -11,6 +11,7 @@ import { DayScreen } from '@/features/calendar/DayScreen'
 import { GoalsScreen } from '@/features/goals/GoalsScreen'
 import { StatsScreen } from '@/features/stats/StatsScreen'
 import { SettingsScreen } from '@/features/settings/SettingsScreen'
+import { timerTaskStore } from '@/lib/timerTaskStore'
 
 function AppShell() {
   const desktop = useIsDesktop()
@@ -19,6 +20,14 @@ function AppShell() {
 
   const accentColor = 'var(--xh-focus)'
   const tab = desktop ? desktopTab : mobileTab
+
+  function startTimerWithTask(taskId: string) {
+    timerTaskStore.request(taskId)
+    // Les deux onglets, parce que la barre mobile et la latérale desktop ont
+    // chacune leur état : on ne sait pas laquelle est à l'écran ici.
+    setMobileTab('timer')
+    setDesktopTab('timer')
+  }
 
   return (
     <Layout
@@ -34,9 +43,9 @@ function AppShell() {
           localStorage on mount anyway. Dropping this key would surface such bugs. */}
       <div key={tab} style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'xh-fade-in 0.22s ease both' }}>
         {tab === 'timer' && <TimerScreen isDesktop={desktop} />}
-        {tab === 'tasks' && <TasksScreen />}
+        {tab === 'tasks' && <TasksScreen onStartTimer={startTimerWithTask} />}
         {tab === 'matrix' && <MatrixScreen />}
-        {tab === 'day' && <DayScreen />}
+        {tab === 'day' && <DayScreen onStartTimer={startTimerWithTask} />}
         {tab === 'goals' && <GoalsScreen />}
         {tab === 'stats' && <StatsScreen />}
         {(tab === 'profile' || tab === 'settings') && <SettingsScreen isDesktop={desktop} />}

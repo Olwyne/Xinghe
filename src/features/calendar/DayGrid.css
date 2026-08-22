@@ -158,6 +158,110 @@
   margin: 0;
   font-size: 0.78rem;
   opacity: 0.5;
+  /* Purement informatif, superposé au couloir planifié : ne doit jamais
+     intercepter le tap qui est censé atteindre le couloir en dessous. */
+  pointer-events: none;
+}
+
+/* Deux couloirs disjoints : un bloc planifié ne peut jamais recouvrir une
+   session, donc la cible d'un geste est toujours certaine. */
+.daygrid__lane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+}
+
+/* Les blocs à l'intérieur sont positionnés en absolu avec des % de
+   left/width : leur bloc englobant est la boîte de padding de ce couloir,
+   donc un padding ici ne réduit pas la zone qu'ils occupent (ils peuvent
+   déborder dedans). Pour ouvrir un vrai vide de 3px de part et d'autre de
+   la frontière centrale, on rétrécit chaque couloir via calc() et on
+   décale le second d'autant : les deux couloirs restent égaux en largeur
+   et les % des blocs, calculés par rapport à la largeur de leur propre
+   couloir, restent numériquement corrects. */
+.daygrid__lane--planned {
+  left: 0;
+  width: calc(50% - 3px);
+}
+
+.daygrid__lane--actual {
+  left: calc(50% + 3px);
+  width: calc(50% - 3px);
+}
+
+.daygrid__lanelabels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.daygrid__lanelabels span {
+  flex: 1;
+  padding-left: 4px;
+}
+
+/* Contour pointillé, fond transparent : une intention n'est pas un fait.
+   Bordure en propriétés longues (et non le raccourci `border`) : un bloc
+   planifié tronqué porte aussi la classe .daygrid__block--clipend, qui ne
+   fixe que border-bottom-width/style. Le raccourci `border` réécrirait ces
+   quatre côtés à la fois et effacerait ce marqueur de troncature quelle que
+   soit la position de cette règle dans le fichier ; les propriétés longues
+   n'écrivent que ce qu'elles nomment, donc la bordure basse posée par
+   --clipend survit. */
+.daygrid__planned {
+  position: absolute;
+  min-height: 14px;
+  padding: 2px 6px;
+  border-top-width: 1px;
+  border-right-width: 1px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+  border-top-style: dashed;
+  border-right-style: dashed;
+  border-bottom-style: dashed;
+  border-left-style: dashed;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 0.7rem;
+  text-align: left;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  /* Le glisser vertical doit rester à l'app : sans cela, le navigateur
+     interprète le geste comme un défilement et le bloc ne suit pas. */
+  touch-action: none;
+  /* Sans ça, un appui prolongé pendant le tiré déclenche la sélection de
+     texte / le menu contextuel d'iOS, qui coupe le geste par un
+     pointercancel silencieux. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Sélecteur composé : sa spécificité (deux classes) dépasse celle de
+   .daygrid__planned et de .daygrid__block--clipend pris isolément, donc ce
+   marqueur l'emporte toujours sur le raccourci ci-dessus, indépendamment de
+   l'ordre des règles dans ce fichier. */
+.daygrid__planned.daygrid__block--clipend {
+  border-bottom-width: 3px;
+  border-bottom-style: double;
+}
+
+.daygrid__planned--done {
+  opacity: 0.45;
+}
+
+.daygrid__planned--dragging {
+  opacity: 0.75;
+  border-style: solid;
 }
 
 .daygrid__attach {

@@ -10,15 +10,24 @@ export interface TimeEntryDraft {
 
 export type TimeEntryError = 'duration-too-short' | 'starts-in-future' | 'invalid-time'
 
+export interface ValidateEntryOptions {
+  /** Un bloc planifié est dans le futur par nature ; une session mesurée, jamais. */
+  allowFuture?: boolean
+}
+
 /**
  * Trois règles : au moins une minute, un jour et une heure de début valides
  * (un champ date/heure vidé par l'utilisateur produit NaN), pas de début
- * dans le futur. Les chevauchements sont autorisés — le seul qui gêne se
- * verra sur la grille horaire du calendrier, pas dans ce formulaire.
+ * dans le futur (sauf pour un bloc planifié). Les chevauchements sont autorisés —
+ * le seul qui gêne se verra sur la grille horaire du calendrier, pas dans ce formulaire.
  *
  * null = valide.
  */
-export function validateEntry(draft: TimeEntryDraft, now: number): TimeEntryError | null {
+export function validateEntry(
+  draft: TimeEntryDraft,
+  now: number,
+  options: ValidateEntryOptions = {},
+): TimeEntryError | null {
   if (!Number.isInteger(draft.durationMinutes) || draft.durationMinutes < 1) {
     return 'duration-too-short'
   }
@@ -30,7 +39,7 @@ export function validateEntry(draft: TimeEntryDraft, now: number): TimeEntryErro
   ) {
     return 'invalid-time'
   }
-  if (draftToStartedAt(draft) > now) return 'starts-in-future'
+  if (!options.allowFuture && draftToStartedAt(draft) > now) return 'starts-in-future'
   return null
 }
 

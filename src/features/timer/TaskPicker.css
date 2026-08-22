@@ -26,6 +26,15 @@
   border-color: var(--tp-color, var(--xh-card-border-strong));
 }
 
+.task-picker__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.task-picker__btn:disabled:hover {
+  border-color: var(--xh-card-border);
+}
+
 .task-picker__dot {
   width: 8px;
   height: 8px;

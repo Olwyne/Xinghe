@@ -8,13 +8,28 @@ interface TaskPickerProps {
   projectColors: Record<string, string>
   selectedId: string | null
   onSelect: (taskId: string | null) => void
+  /** Coupe l'ouverture du menu : la saisie associée n'est pas exploitable en l'état. */
+  disabled?: boolean
 }
 
-export function TaskPicker({ tasks, projectColors, selectedId, onSelect }: TaskPickerProps) {
+export function TaskPicker({
+  tasks,
+  projectColors,
+  selectedId,
+  onSelect,
+  disabled = false,
+}: TaskPickerProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const selected = tasks.find((t) => t.id === selectedId)
+
+  // La saisie devient invalide pendant que le menu est ouvert (ex. l'heure
+  // tapée passe hors champ) : on referme plutôt que de laisser un choix
+  // possible sur un menu que handlePick va de toute façon ignorer.
+  useEffect(() => {
+    if (disabled) setOpen(false)
+  }, [disabled])
 
   useEffect(() => {
     if (!open) return
@@ -37,6 +52,7 @@ export function TaskPicker({ tasks, projectColors, selectedId, onSelect }: TaskP
       <button
         className="task-picker__btn"
         type="button"
+        disabled={disabled}
         onClick={() => setOpen((v) => !v)}
         style={{ '--tp-color': color } as React.CSSProperties}
       >

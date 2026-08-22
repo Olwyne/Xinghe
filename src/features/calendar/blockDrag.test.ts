@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import type { PeriodRange } from '@/lib/time'
-import { snapToStep, dragToStart, SNAP_STEP_MS } from './blockDrag'
+import { snapToStep, dragToStart, clampStartToRange, resolveTimeOfDayInRange, SNAP_STEP_MS } from './blockDrag'
+
+// Le test DST plus bas a besoin d'un fuseau qui observe l'heure d'été pour
+// être significatif ; on le fixe explicitement plutôt que de dépendre du
+// fuseau ambiant du runner (pas de @types/node dans ce projet, donc process
+// se lit via globalThis).
+;(globalThis as { process?: { env: Record<string, string | undefined> } }).process!.env.TZ =
+  'Europe/Paris'
 
 const HOUR = 3_600_000
 const MINUTE = 60_000
@@ -8,6 +15,11 @@ const DAY_START = new Date(2026, 2, 10, 4).getTime() // 10 mars 2026, 4h locales
 const RANGE: PeriodRange = { start: DAY_START, end: DAY_START + 24 * HOUR }
 /** 48 px/heure, la hauteur de la grille. */
 const PX_PER_MS = 48 / HOUR
+
+/** Construit un timestamp local, sans dépendre du fuseau du runner. */
+function at(y: number, m: number, d: number, h = 0, min = 0): number {
+  return new Date(y, m - 1, d, h, min, 0, 0).getTime()
+}
 
 describe('snapToStep', () => {
   it("arrondit au pas le plus proche vers le bas", () => {
@@ -104,5 +116,78 @@ describe('dragToStart', () => {
     expect(dragToStart({ ...base, originalStart, deltaPx: 30, pxPerMs: 0 })).toBe(
       originalStart,
     )
+  })
+})
+
+describe('clampStartToRange', () => {
+  it('laisse intact un début pile sur range.start', () => {
+    expect(clampStartToRange(RANGE.start, RANGE, SNAP_STEP_MS)).toBe(RANGE.start)
+  })
+
+  it('laisse intact un début pile sur le dernier pas (range.end - stepMs)', () => {
+    const lastStep = RANGE.end - SNAP_STEP_MS
+    expect(clampStartToRange(lastStep, RANGE, SNAP_STEP_MS)).toBe(lastStep)
+  })
+
+  it('ramène un début pile sur range.end au dernier pas', () => {
+    expect(clampStartToRange(RANGE.end, RANGE, SNAP_STEP_MS)).toBe(RANGE.end - SNAP_STEP_MS)
+  })
+
+  it('ramène un début avant la fenêtre à range.start', () => {
+    expect(clampStartToRange(RANGE.start - HOUR, RANGE, SNAP_STEP_MS)).toBe(RANGE.start)
+  })
+})
+
+describe('resolveTimeOfDayInRange', () => {
+  // Fenêtre de référence : 10 mars 2026, 4h locales -> 11 mars 2026, 4h.
+  const range = RANGE
+
+  it('une heure à ou après la frontière du jour résout dans la date de début de la fenêtre', () => {
+    const result = resolveTimeOfDayInRange(8 * 60, range) // 08:00
+    expect(result).toBe(at(2026, 3, 10, 8, 0))
+  })
+
+  it('une heure avant la frontière résout le lendemain calendaire, dans la fenêtre', () => {
+    const result = resolveTimeOfDayInRange(1 * 60 + 30, range) // 01:30
+    expect(result).toBe(at(2026, 3, 11, 1, 30))
+    expect(result).toBeGreaterThanOrEqual(range.start)
+    expect(result).toBeLessThan(range.end)
+  })
+
+  it('les deux bornes de la fenêtre résolvent à l’intérieur', () => {
+    // La borne basse : exactement l'heure de frontière (04:00) -> range.start.
+    expect(resolveTimeOfDayInRange(4 * 60, range)).toBe(range.start)
+    // Juste avant la frontière (03:59) -> le dernier instant représentable
+    // avant range.end, sur la date suivante.
+    const justBefore = resolveTimeOfDayInRange(3 * 60 + 59, range)
+    expect(justBefore).toBeLessThan(range.end)
+    expect(justBefore).toBeGreaterThanOrEqual(range.start)
+  })
+
+  it('fenêtre de 23 heures (passage à l’heure d’été, 29 mars 2026) : les deux moitiés résolvent dans la fenêtre', () => {
+    const dstRange: PeriodRange = { start: at(2026, 3, 28, 4), end: at(2026, 3, 29, 4) }
+    expect((dstRange.end - dstRange.start) / HOUR).toBe(23)
+
+    const evening = resolveTimeOfDayInRange(20 * 60, dstRange) // 20:00, avant minuit
+    expect(evening).toBe(at(2026, 3, 28, 20, 0))
+
+    const postMidnight = resolveTimeOfDayInRange(1 * 60, dstRange) // 01:00, après minuit
+    expect(postMidnight).toBe(at(2026, 3, 29, 1, 0))
+    expect(postMidnight).toBeLessThan(dstRange.end)
+  })
+
+  it('fenêtre de 25 heures (retour à l’heure d’hiver, 25 octobre 2026) : les deux moitiés résolvent dans la fenêtre', () => {
+    // Le passage à l'heure d'hiver a lieu à 3h le 25 octobre 2026 (3h -> 2h) :
+    // la fenêtre qui se termine à 4h ce jour-là contient donc le changement
+    // et dure 25 heures, pas 24.
+    const dstRange: PeriodRange = { start: at(2026, 10, 24, 4), end: at(2026, 10, 25, 4) }
+    expect((dstRange.end - dstRange.start) / HOUR).toBe(25)
+
+    const evening = resolveTimeOfDayInRange(20 * 60, dstRange) // 20:00, avant minuit
+    expect(evening).toBe(at(2026, 10, 24, 20, 0))
+
+    const postMidnight = resolveTimeOfDayInRange(1 * 60, dstRange) // 01:00, après minuit
+    expect(postMidnight).toBe(at(2026, 10, 25, 1, 0))
+    expect(postMidnight).toBeLessThan(dstRange.end)
   })
 })

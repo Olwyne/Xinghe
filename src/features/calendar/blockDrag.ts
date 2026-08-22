@@ -25,6 +25,39 @@ export function clampStartToRange(snapped: number, range: PeriodRange, stepMs: n
 }
 
 /**
+ * Résout une heure du jour (minutes depuis minuit) dans l'occurrence de
+ * cette heure qui tombe réellement dans la fenêtre affichée.
+ *
+ * La fenêtre d'un jour ne commence pas à minuit mais à `dayStartHour` (le
+ * réglage utilisateur, souvent 4h) et court jusqu'à la même heure le
+ * lendemain calendaire : elle enjambe minuit. Une heure tapée par
+ * l'utilisateur ne porte que l'heure du jour (« 01:30 »), pas la date — il
+ * faut donc décider si elle appartient à la date de début de la fenêtre ou
+ * au lendemain. La règle : à ou après la frontière (l'heure locale de
+ * `range.start`), c'est la date de début ; avant, c'est le lendemain, la
+ * partie de la fenêtre qui a passé minuit.
+ *
+ * Construit via les composants calendaires (année/mois/jour/heure/minute)
+ * plutôt qu'en ajoutant des millisecondes à un minuit local : une addition
+ * en millisecondes se déraille dès qu'un changement d'heure d'été raccourcit
+ * ou allonge la journée locale de l'offset attendu.
+ */
+export function resolveTimeOfDayInRange(startMinutes: number, range: PeriodRange): number {
+  const base = new Date(range.start)
+  const boundaryMinutes = base.getHours() * 60 + base.getMinutes()
+  const dayOffset = startMinutes >= boundaryMinutes ? 0 : 1
+  const hours = Math.floor(startMinutes / 60)
+  const minutes = startMinutes % 60
+  return new Date(
+    base.getFullYear(),
+    base.getMonth(),
+    base.getDate() + dayOffset,
+    hours,
+    minutes,
+  ).getTime()
+}
+
+/**
  * Nouveau début d'un bloc tiré de `deltaPx` pixels.
  *
  * Deux règles :

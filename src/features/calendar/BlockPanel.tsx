@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TaskPicker } from '@/features/timer/TaskPicker'
-import { validateEntry, draftToStartedAt, type TimeEntryDraft } from '@/features/tasks/timeEntry'
+import { validateEntry, type TimeEntryDraft } from '@/features/tasks/timeEntry'
+import { resolveTimeOfDayInRange } from './blockDrag'
 import type { PeriodRange } from '@/lib/time'
 import type { Task } from '@/features/tasks/types'
 import type { PlannedBlock } from './types'
@@ -80,12 +81,16 @@ export function BlockPanel({
   const error = validateEntry(draft, Date.now(), { allowFuture: true })
 
   // `toDraft` ancre `day` sur minuit local, alors que la fenêtre du jour
-  // affiché peut démarrer plus tard (réglage dayStart, 04:00 par défaut).
-  // Un utilisateur qui tape une heure antérieure à ce décalage désigne donc
-  // sans le savoir un instant qui appartient à la fenêtre précédente ; useDayBlocks
-  // filtrerait ce bloc hors du jour affiché et il disparaîtrait sans un mot.
-  // On refuse l'écriture plutôt que de recadrer la valeur tapée en douce.
-  const startedAt = draftToStartedAt(draft)
+  // affiché peut démarrer plus tard (réglage dayStart, 04:00 par défaut) et
+  // enjambe minuit. `draft.day + startMinutes` ignorerait cette bascule et
+  // rendrait injoignables toutes les heures situées de l'autre côté de
+  // minuit par rapport à l'instant qui a ouvert le panneau — avec un refus
+  // qui accuserait à tort l'utilisateur de viser hors du jour affiché.
+  // `resolveTimeOfDayInRange` retrouve la bonne date calendaire (celle du
+  // début ou celle du lendemain) à partir de la seule heure tapée et de la
+  // fenêtre affichée ; `draft.day` ne sert plus qu'à la garde de
+  // `validateEntry` contre un champ vidé.
+  const startedAt = resolveTimeOfDayInRange(draft.startMinutes, range)
   const outOfRange = startedAt < range.start || startedAt >= range.end
 
   const editedTask =
@@ -180,6 +185,7 @@ export function BlockPanel({
           projectColors={projectColors}
           selectedId={null}
           onSelect={handlePick}
+          disabled={error !== null || outOfRange}
         />
       ) : (
         <div className="blockpanel__actions">
@@ -190,24 +196,26 @@ export function BlockPanel({
             {t('calendar.startTimer')}
           </button>
           {confirmingDelete ? (
-            // Annuler occupe la place de l'ancien bouton Supprimer (même
-            // margin-left: auto) : un double-clic qui arme puis retape aux
-            // mêmes coordonnées tombe sur Annuler, pas sur la confirmation,
-            // qui est décalée à droite. Pattern repris de TaskTimeEntries.
+            // Confirmer d'abord, Annuler ensuite : c'est Annuler, dernier du
+            // groupe, qui hérite du bord droit — la place exacte de l'ancien
+            // bouton Supprimer. Un double-clic qui arme puis retape aux
+            // mêmes coordonnées tombe donc sur Annuler, jamais sur une
+            // seconde confirmation. Pattern repris de TaskTimeEntries, où
+            // c'est également le bouton d'annulation qui ferme la ligne.
             <>
-              <button
-                type="button"
-                className="blockpanel__cancel"
-                onClick={() => setConfirmingDelete(false)}
-              >
-                {t('common.cancel')}
-              </button>
               <button
                 type="button"
                 className="blockpanel__danger blockpanel__confirm"
                 onClick={handleRemove}
               >
                 {t('calendar.confirmDelete')}
+              </button>
+              <button
+                type="button"
+                className="blockpanel__cancel"
+                onClick={() => setConfirmingDelete(false)}
+              >
+                {t('common.cancel')}
               </button>
             </>
           ) : (

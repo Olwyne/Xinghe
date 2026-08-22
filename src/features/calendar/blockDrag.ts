@@ -9,6 +9,22 @@ export function snapToStep(ms: number, stepMs: number): number {
 }
 
 /**
+ * Borne un début déjà accroché dans la fenêtre `[range.start, range.end)`.
+ *
+ * Le point haut de la fenêtre n'est jamais un début valide : un début pile
+ * sur `range.end` (ou au-delà) tombe hors du filtre de useDayBlocks et le
+ * bloc atterrit silencieusement sur le jour suivant. Partagée entre le tiré
+ * (dragToStart) et le clic (DayGrid) : les deux doivent s'accorder sur où
+ * finit le dernier créneau du jour, jamais le redériver chacun de son côté.
+ */
+export function clampStartToRange(snapped: number, range: PeriodRange, stepMs: number): number {
+  if (snapped < range.start) return range.start
+  const lastStep = range.end - stepMs
+  if (snapped > lastStep) return lastStep
+  return snapped
+}
+
+/**
  * Nouveau début d'un bloc tiré de `deltaPx` pixels.
  *
  * Deux règles :
@@ -31,9 +47,5 @@ export function dragToStart(args: {
 
   const raw = originalStart + deltaPx / pxPerMs
   const snapped = range.start + snapToStep(raw - range.start, stepMs)
-
-  if (snapped < range.start) return range.start
-  const lastStep = range.end - stepMs
-  if (snapped > lastStep) return lastStep
-  return snapped
+  return clampStartToRange(snapped, range, stepMs)
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TaskPicker } from '@/features/timer/TaskPicker'
 import { validateEntry, draftToStartedAt, type TimeEntryDraft } from '@/features/tasks/timeEntry'
+import type { PeriodRange } from '@/lib/time'
 import type { Task } from '@/features/tasks/types'
 import type { PlannedBlock } from './types'
 import './BlockPanel.css'
@@ -12,6 +13,8 @@ export type BlockPanelMode =
 
 interface BlockPanelProps {
   mode: BlockPanelMode
+  /** Fenêtre du jour affiché : sert à refuser une écriture hors champ (Task 7 review). */
+  range: PeriodRange
   tasks: Task[]
   projectColors: Record<string, string>
   defaultDurationMinutes: number
@@ -52,6 +55,7 @@ function fromTimeInput(value: string): number {
 
 export function BlockPanel({
   mode,
+  range,
   tasks,
   projectColors,
   defaultDurationMinutes,
@@ -75,15 +79,24 @@ export function BlockPanel({
   // gardes tiennent, dont celle contre un champ vidé qui produirait NaN.
   const error = validateEntry(draft, Date.now(), { allowFuture: true })
 
+  // `toDraft` ancre `day` sur minuit local, alors que la fenêtre du jour
+  // affiché peut démarrer plus tard (réglage dayStart, 04:00 par défaut).
+  // Un utilisateur qui tape une heure antérieure à ce décalage désigne donc
+  // sans le savoir un instant qui appartient à la fenêtre précédente ; useDayBlocks
+  // filtrerait ce bloc hors du jour affiché et il disparaîtrait sans un mot.
+  // On refuse l'écriture plutôt que de recadrer la valeur tapée en douce.
+  const startedAt = draftToStartedAt(draft)
+  const outOfRange = startedAt < range.start || startedAt >= range.end
+
   const editedTask =
     mode.kind === 'edit' ? tasks.find((task) => task.id === mode.block.taskId) : undefined
 
   async function handlePick(taskId: string | null) {
     const task = taskId ? tasks.find((candidate) => candidate.id === taskId) : null
-    if (!task || error) return
+    if (!task || error || outOfRange) return
     setFailed(false)
     try {
-      await onCreate(task, draftToStartedAt(draft), draft.durationMinutes * 60_000)
+      await onCreate(task, startedAt, draft.durationMinutes * 60_000)
       onClose()
     } catch {
       setFailed(true)
@@ -91,10 +104,10 @@ export function BlockPanel({
   }
 
   async function handleSave() {
-    if (mode.kind !== 'edit' || error) return
+    if (mode.kind !== 'edit' || error || outOfRange) return
     setFailed(false)
     try {
-      await onUpdate(mode.block.id, draftToStartedAt(draft), draft.durationMinutes * 60_000)
+      await onUpdate(mode.block.id, startedAt, draft.durationMinutes * 60_000)
       onClose()
     } catch {
       setFailed(true)
@@ -122,7 +135,7 @@ export function BlockPanel({
         <button
           type="button"
           className="blockpanel__close"
-          aria-label={t('calendar.close')}
+          aria-label={t('common.close')}
           onClick={onClose}
         >
           ✕
@@ -158,6 +171,7 @@ export function BlockPanel({
         </label>
       </div>
 
+      {outOfRange && <p className="blockpanel__error">{t('calendar.blockOutOfRange')}</p>}
       {failed && <p className="blockpanel__error">{t('calendar.blockFailed')}</p>}
 
       {mode.kind === 'create' ? (
@@ -169,23 +183,40 @@ export function BlockPanel({
         />
       ) : (
         <div className="blockpanel__actions">
-          <button type="button" disabled={error !== null} onClick={handleSave}>
+          <button type="button" disabled={error !== null || outOfRange} onClick={handleSave}>
             {t('common.save')}
           </button>
           <button type="button" onClick={() => onStartTimer(mode.block.taskId)}>
             {t('calendar.startTimer')}
           </button>
           {confirmingDelete ? (
-            <button type="button" className="blockpanel__danger" onClick={handleRemove}>
-              {t('calendar.confirmDelete')}
-            </button>
+            // Annuler occupe la place de l'ancien bouton Supprimer (même
+            // margin-left: auto) : un double-clic qui arme puis retape aux
+            // mêmes coordonnées tombe sur Annuler, pas sur la confirmation,
+            // qui est décalée à droite. Pattern repris de TaskTimeEntries.
+            <>
+              <button
+                type="button"
+                className="blockpanel__cancel"
+                onClick={() => setConfirmingDelete(false)}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                className="blockpanel__danger blockpanel__confirm"
+                onClick={handleRemove}
+              >
+                {t('calendar.confirmDelete')}
+              </button>
+            </>
           ) : (
             <button
               type="button"
               className="blockpanel__danger"
               onClick={() => setConfirmingDelete(true)}
             >
-              {t('calendar.deleteBlock')}
+              {t('common.delete')}
             </button>
           )}
         </div>

@@ -8,7 +8,7 @@ import { useDayBlocks } from '@/hooks/useDayBlocks'
 import { useTimerSettings } from '@/hooks/useTimerSettings'
 import { TaskPicker } from '@/features/timer/TaskPicker'
 import { BlockPanel, type BlockPanelMode } from './BlockPanel'
-import { snapToStep, SNAP_STEP_MS } from './blockDrag'
+import { snapToStep, clampStartToRange, SNAP_STEP_MS } from './blockDrag'
 import { layoutDaySessions, layoutSpans } from './dayLayout'
 import type { Task } from '@/features/tasks/types'
 import './DayGrid.css'
@@ -43,6 +43,11 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
   const [attachFailed, setAttachFailed] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const [panel, setPanel] = useState<BlockPanelMode | null>(null)
+  // Un slot vide n'a pas d'identité propre (contrairement à un bloc, keyé sur
+  // son id) : deux clics sur le même quart d'heure produisent le même
+  // `startedAt`. Ce compteur force quand même un remount, sinon le second
+  // clic hérite du brouillon et de l'erreur laissés par le premier panneau.
+  const [createSeq, setCreateSeq] = useState(0)
   const plannedLaneRef = useRef<HTMLDivElement | null>(null)
 
   const projectColors = useMemo(
@@ -181,10 +186,15 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
               <div className="daygrid__skeleton" style={{ top: '20%', height: '8%' }} />
               <div className="daygrid__skeleton" style={{ top: '45%', height: '12%' }} />
             </>
-          ) : sessionPositions.length === 0 && plannedPositions.length === 0 ? (
-            <p className="daygrid__empty">{t('calendar.emptyDay')}</p>
           ) : (
             <>
+              {/* Le message de jour vide se superpose aux couloirs plutôt que
+                  de les remplacer : sans ça, planifier le premier créneau
+                  d'un jour vide — le cas que la fonctionnalité sert d'abord —
+                  n'avait aucune cible cliquable. */}
+              {sessionPositions.length === 0 && plannedPositions.length === 0 && (
+                <p className="daygrid__empty">{t('calendar.emptyDay')}</p>
+              )}
               <div
                 className="daygrid__lane daygrid__lane--planned"
                 ref={plannedLaneRef}
@@ -197,7 +207,13 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
                   if (rect.height <= 0) return
                   const fraction = (e.clientY - rect.top) / rect.height
                   const raw = range.start + fraction * (range.end - range.start)
-                  const startedAt = range.start + snapToStep(raw - range.start, SNAP_STEP_MS)
+                  const snapped = range.start + snapToStep(raw - range.start, SNAP_STEP_MS)
+                  // Même bornage que le tiré (dragToStart) : un clic tout en
+                  // bas de la fenêtre donne fraction≈1, donc un snapped qui
+                  // vaut range.end — hors fenêtre de useDayBlocks, le bloc
+                  // atterrirait silencieusement sur le jour suivant.
+                  const startedAt = clampStartToRange(snapped, range, SNAP_STEP_MS)
+                  setCreateSeq((n) => n + 1)
                   setPanel({ kind: 'create', startedAt })
                 }}
               >
@@ -285,9 +301,17 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
           // Clé sur l'identité de la cible : cliquer un bloc B alors que le
           // panneau de A est ouvert saute onClose (stopPropagation), donc sans
           // cette clé React réutiliserait l'instance et son état interne
-          // (brouillon, erreur, suppression armée) resterait celui de A.
-          key={panel.kind === 'edit' ? `edit-${panel.block.id}` : `create-${panel.startedAt}`}
+          // (brouillon, erreur, suppression armée) resterait celui de A. En
+          // création, `startedAt` seul ne suffit pas : recliquer le même
+          // quart d'heure redonne la même valeur, donc `createSeq` force le
+          // remount pour repartir d'un brouillon neuf.
+          key={
+            panel.kind === 'edit'
+              ? `edit-${panel.block.id}`
+              : `create-${panel.startedAt}-${createSeq}`
+          }
           mode={panel}
+          range={range}
           tasks={tasks}
           projectColors={projectColors}
           defaultDurationMinutes={settings.focusMinutes}

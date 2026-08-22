@@ -79,6 +79,19 @@
   color: var(--xh-focus);
 }
 
+/* Armé, le groupe [Annuler, Confirmer] remplace le seul bouton Supprimer.
+   C'est .blockpanel__cancel qui hérite du margin-left: auto pour que le
+   groupe entier reste collé à droite comme avant : Annuler atterrit donc
+   exactement où était Supprimer, et Confirmer (qui n'a pas ce margin) se
+   retrouve décalé après lui, jamais aux coordonnées du premier clic. */
+.blockpanel__cancel {
+  margin-left: auto;
+}
+
+.blockpanel__confirm {
+  margin-left: 0;
+}
+
 .blockpanel__error {
   margin: 0;
   font-size: 0.75rem;

@@ -187,9 +187,8 @@
     "blockStart": "Start",
     "blockDuration": "Duration (min)",
     "startTimer": "Start",
-    "deleteBlock": "Delete",
     "confirmDelete": "Confirm?",
     "blockFailed": "Could not save.",
-    "close": "Close"
+    "blockOutOfRange": "That time doesn't belong to the day shown."
   }
 }

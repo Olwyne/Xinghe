@@ -187,9 +187,8 @@
     "blockStart": "Début",
     "blockDuration": "Durée (min)",
     "startTimer": "Démarrer",
-    "deleteBlock": "Supprimer",
     "confirmDelete": "Confirmer ?",
     "blockFailed": "Échec de l'enregistrement.",
-    "close": "Fermer"
+    "blockOutOfRange": "Ce créneau n'appartient pas au jour affiché."
   }
 }

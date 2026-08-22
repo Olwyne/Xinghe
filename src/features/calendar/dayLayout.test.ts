@@ -37,10 +37,40 @@ describe('layoutDaySessions — positions', () => {
     expect(block.height).toBeCloseTo(1)
   })
 
+  it("reste proportionnel sur une fenêtre de 25 heures", () => {
+    // Une fenêtre plus longue que 24h est le cas où un clamp naïf sur un
+    // dénominateur de 24h tronquerait silencieusement une session pourtant
+    // entièrement à l'intérieur.
+    const longRange: PeriodRange = { start: DAY_START, end: DAY_START + 25 * HOUR }
+    const [block] = layoutDaySessions([at('a', 24, 1)], longRange)
+    expect(block.top).toBeCloseTo(24 / 25)
+    expect(block.height).toBeCloseTo(1 / 25)
+    expect(block.clippedEnd).toBe(false)
+  })
+
   it("n'applique aucun plancher de hauteur — 30 secondes reste 30 secondes", () => {
     const tiny = { ...at('a', 6, 0), durationMs: 30_000 }
     const [block] = layoutDaySessions([tiny], RANGE)
     expect(block.height).toBeCloseTo(30_000 / (24 * HOUR))
+  })
+
+  it("une session de 30 secondes glissée dans un chevauchement ne change pas le columnCount des voisines", () => {
+    // a (0h-1h) et b (0.5h-2h) se recouvrent (0.5h-1h) et forment un groupe
+    // à deux colonnes. Une session de 30 secondes démarrant à 1h06 — après
+    // la fin réelle de a, donc dans la colonne qu'elle vient de libérer,
+    // mais toujours dans la fenêtre de chevauchement du groupe — doit
+    // réutiliser cette colonne plutôt que d'en ouvrir une troisième. Un
+    // plancher de durée qui gonflerait sa fin ferait manquer cette réutilisation
+    // et pousserait columnCount de a et b de 2 à 3.
+    const a = at('a', 0, 1)
+    const b = at('b', 0.5, 1.5)
+    const tiny = { ...at('c', 1.1, 0), durationMs: 30_000 }
+    const blocks = layoutDaySessions([a, b, tiny], RANGE)
+    const byId = new Map(blocks.map((x) => [x.session.id, x]))
+    expect(byId.get('a')?.columnCount).toBe(2)
+    expect(byId.get('b')?.columnCount).toBe(2)
+    expect(byId.get('c')?.columnCount).toBe(2)
+    expect(byId.get('c')?.column).toBe(0)
   })
 })
 
@@ -72,9 +102,14 @@ describe('layoutDaySessions — troncature', () => {
   })
 
   it("borne top et height à l'intervalle [0, 1]", () => {
-    const huge = { ...at('a', 0, 0), durationMs: 50 * HOUR }
+    // Démarre après le début de la fenêtre (top > 0 réel, pas 0 par
+    // construction) et déborde largement après la fin (height > 1 sans
+    // troncature) : les quatre bornes sont de vraies vérifications.
+    const huge = { ...at('a', 2, 0), durationMs: 50 * HOUR }
     const [block] = layoutDaySessions([huge], RANGE)
     expect(block.top).toBeGreaterThanOrEqual(0)
+    expect(block.top).toBeLessThanOrEqual(1)
+    expect(block.height).toBeGreaterThanOrEqual(0)
     expect(block.height).toBeLessThanOrEqual(1)
   })
 

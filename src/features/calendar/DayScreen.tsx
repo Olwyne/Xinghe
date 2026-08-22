@@ -12,12 +12,19 @@ export function DayScreen() {
   const { user } = useAuth()
   const uid = user?.uid ?? null
   const { projects } = useProjects(uid)
-  const { updateTask } = useTasks(uid, 'all')
+  const { updateTask, deleteTask } = useTasks(uid, 'all')
   const [openTask, setOpenTask] = useState<Task | null>(null)
 
   async function handleSave(draft: TaskDraft) {
     if (!openTask) return
     await updateTask(openTask.id, draft)
+    setOpenTask(null)
+  }
+
+  async function handleDeleteOpenTask() {
+    if (openTask) {
+      await deleteTask(openTask.id)
+    }
     setOpenTask(null)
   }
 
@@ -32,6 +39,7 @@ export function DayScreen() {
           projects={projects}
           defaultProjectId={openTask.projectId}
           onSave={handleSave}
+          onDelete={handleDeleteOpenTask}
           onClose={() => setOpenTask(null)}
         />
       )}

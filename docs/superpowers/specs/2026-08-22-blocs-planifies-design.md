@@ -61,9 +61,10 @@ Requête à **une seule clause de plage** (`startedAt >= start`, `startedAt < en
 
 `addBlock` écrit `taskId` **et** `projectId` ensemble — l'invariant du sous-projet B, appliqué ici dès la création.
 
-**Deux chemins existants à étendre :**
+**Trois chemins existants à étendre**, tous porteurs du même invariant — le temps d'une tâche est compté dans le projet de cette tâche. Les sessions le respectent déjà sur les trois ; un bloc porte aussi un `projectId`, donc il le respecte partout ou nulle part.
 
-- `deleteTask` (`src/hooks/useTasks.ts`) supprime aujourd'hui la tâche sans toucher à ses sessions. Il doit désormais supprimer ses blocs, dans le même batch.
+- `updateTask` (`src/hooks/useTasks.ts`) réassigne les sessions quand une tâche change de projet. Les blocs suivent, dans le même passage et avant l'écriture de la tâche — sinon le prévu resterait compté dans l'ancien projet alors que le réel a migré.
+- `deleteTask` supprime aujourd'hui la tâche sans toucher à ses sessions. Il doit désormais supprimer ses blocs, dans le même batch.
 - `deleteProject` (`src/hooks/useProjects.ts`) migre tâches et sessions vers l'inbox. Les blocs rejoignent ce batch, sans quoi leur `projectId` pointerait sur un projet mort et le bloc perdrait sa couleur.
 
 ## Logique pure
@@ -113,7 +114,7 @@ validateEntry(draft, now, { allowFuture: true })
 
 Les tests existants gardent leur sens ; C2 couvre la nouvelle branche.
 
-**4. Cascades**, en fonctions pures aux côtés de `reassignSessions` : `removeBlocksOfTask(blocks, taskId)` et `reassignBlocks(blocks, taskId, projectId)`.
+**4. Cascades**, en fonctions pures : `removeBlocksOfTask(blocks, taskId)`, `reassignBlocksOfTask(blocks, taskId, newProjectId)` et `reassignBlocksOfProject(blocks, projectId, newProjectId)` — une par chemin, sur le modèle de `reassignSessions`.
 
 ## UI
 
@@ -155,7 +156,7 @@ Vitest, sur le pur uniquement :
 - `layoutSpans` : les 24 tests de C1 conservés tels quels ; plus la preuve que deux appels indépendants ne partagent jamais de colonne.
 - `blockDrag` : `snapToStep` — arrondi au plus proche, delta négatif, valeur pile sur un pas. `dragToStart` — début borné dans la fenêtre, fin jamais bornée, delta nul rend l'identité, fenêtres de 23 h et 25 h.
 - `validateEntry` : futur accepté sous `allowFuture`, refusé sans, `NaN` refusé dans les deux cas.
-- Cascades : `removeBlocksOfTask` et `reassignBlocks`, comme `reassignSessions` l'est déjà.
+- Cascades : `removeBlocksOfTask`, `reassignBlocksOfTask` et `reassignBlocksOfProject`, comme `reassignSessions` l'est déjà.
 
 **Non couvert, et assumé** : le geste lui-même — seuil de 4 px, capture du pointeur, annulation. C'est la limite de la contrainte « aucune nouvelle dépendance », et la raison pour laquelle toute l'arithmétique sort du composant.
 

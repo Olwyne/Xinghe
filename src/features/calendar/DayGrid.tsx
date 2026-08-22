@@ -4,8 +4,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { useTasks } from '@/hooks/useTasks'
 import { useProjects } from '@/hooks/useProjects'
 import { useDaySessions } from '@/hooks/useDaySessions'
+import { useDayBlocks } from '@/hooks/useDayBlocks'
 import { TaskPicker } from '@/features/timer/TaskPicker'
-import { layoutDaySessions } from './dayLayout'
+import { layoutDaySessions, layoutSpans } from './dayLayout'
 import type { Task } from '@/features/tasks/types'
 import './DayGrid.css'
 
@@ -23,6 +24,7 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
 
   const [reference, setReference] = useState(() => Date.now())
   const { sessions, range, loading: sessionsLoading, attachToTask } = useDaySessions(uid, reference)
+  const { blocks: plannedBlocks, loading: blocksLoading } = useDayBlocks(uid, reference)
   const { tasks, loading: tasksLoading } = useTasks(uid, 'all')
   const { projects } = useProjects(uid)
 
@@ -35,7 +37,13 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
     [projects],
   )
   const tasksById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks])
-  const blocks = useMemo(() => layoutDaySessions(sessions, range), [sessions, range])
+  const sessionPositions = useMemo(() => layoutDaySessions(sessions, range), [sessions, range])
+  // Deux appels séparés, jamais un seul : un bloc planifié et une session ne
+  // doivent pas se partager une colonne, ils vivent dans deux couloirs.
+  const plannedPositions = useMemo(
+    () => layoutSpans(plannedBlocks, range),
+    [plannedBlocks, range],
+  )
 
   const hourCount = Math.round((range.end - range.start) / HOUR)
   const hours = Array.from({ length: hourCount }, (_, i) => range.start + i * HOUR)
@@ -149,53 +157,91 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
             <div className="daygrid__now" style={{ top: `${nowTop}%` }} />
           )}
 
-          {sessionsLoading || tasksLoading ? (
+          <div className="daygrid__lanelabels">
+            <span>{t('calendar.planned')}</span>
+            <span>{t('calendar.actual')}</span>
+          </div>
+
+          {sessionsLoading || tasksLoading || blocksLoading ? (
             <>
               <div className="daygrid__skeleton" style={{ top: '20%', height: '8%' }} />
               <div className="daygrid__skeleton" style={{ top: '45%', height: '12%' }} />
             </>
-          ) : blocks.length === 0 ? (
+          ) : sessionPositions.length === 0 && plannedPositions.length === 0 ? (
             <p className="daygrid__empty">{t('calendar.emptyDay')}</p>
           ) : (
-            blocks.map((block) => {
-              const task = block.session.taskId ? tasksById.get(block.session.taskId) : undefined
-              const color = projectColors[block.session.projectId] ?? 'var(--xh-text-faint)'
-              const width = 100 / block.columnCount
-              return (
-                <button
-                  type="button"
-                  key={block.session.id}
-                  className={`daygrid__block ${task ? '' : 'daygrid__block--orphan'} ${
-                    block.clippedEnd ? 'daygrid__block--clipend' : ''
-                  }`}
-                  style={{
-                    top: `${block.top * 100}%`,
-                    height: `${block.height * 100}%`,
-                    left: `${block.column * width}%`,
-                    width: `${width}%`,
-                    borderColor: color,
-                    background: task ? color : 'transparent',
-                  }}
-                  title={[
-                    task ? task.title : t('calendar.noTask'),
-                    block.clippedEnd ? t('calendar.continuesAfter') : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                  onClick={() => {
-                    if (task) onOpenTask(task)
-                    else openAttach(block.session.id)
-                  }}
-                >
-                  <span className="daygrid__blocktitle">
-                    {task ? task.title : t('calendar.noTask')}
-                  </span>
-                  {block.session.origin !== 'manual' && (
-                    <span className="daygrid__blockicon">⏱</span>
-                  )}
-                </button>
-              )
-            })
+            <>
+              <div className="daygrid__lane daygrid__lane--planned">
+                {plannedPositions.map((positioned) => {
+                  const block = positioned.item
+                  const task = tasksById.get(block.taskId)
+                  const color = projectColors[block.projectId] ?? 'var(--xh-text-faint)'
+                  const width = 100 / positioned.columnCount
+                  return (
+                    <div
+                      key={block.id}
+                      className={`daygrid__planned ${
+                        positioned.clippedEnd ? 'daygrid__block--clipend' : ''
+                      } ${task?.completed ? 'daygrid__planned--done' : ''}`}
+                      style={{
+                        top: `${positioned.top * 100}%`,
+                        height: `${positioned.height * 100}%`,
+                        left: `${positioned.column * width}%`,
+                        width: `${width}%`,
+                        borderColor: color,
+                        color,
+                      }}
+                    >
+                      <span className="daygrid__blocktitle">
+                        {task ? task.title : t('calendar.noTask')}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="daygrid__lane daygrid__lane--actual">
+                {sessionPositions.map((block) => {
+                  const task = block.session.taskId ? tasksById.get(block.session.taskId) : undefined
+                  const color = projectColors[block.session.projectId] ?? 'var(--xh-text-faint)'
+                  const width = 100 / block.columnCount
+                  return (
+                    <button
+                      type="button"
+                      key={block.session.id}
+                      className={`daygrid__block ${task ? '' : 'daygrid__block--orphan'} ${
+                        block.clippedEnd ? 'daygrid__block--clipend' : ''
+                      }`}
+                      style={{
+                        top: `${block.top * 100}%`,
+                        height: `${block.height * 100}%`,
+                        left: `${block.column * width}%`,
+                        width: `${width}%`,
+                        borderColor: color,
+                        background: task ? color : 'transparent',
+                      }}
+                      title={[
+                        task ? task.title : t('calendar.noTask'),
+                        block.clippedEnd ? t('calendar.continuesAfter') : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                      onClick={() => {
+                        if (task) onOpenTask(task)
+                        else openAttach(block.session.id)
+                      }}
+                    >
+                      <span className="daygrid__blocktitle">
+                        {task ? task.title : t('calendar.noTask')}
+                      </span>
+                      {block.session.origin !== 'manual' && (
+                        <span className="daygrid__blockicon">⏱</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </>
           )}
         </div>
       </div>

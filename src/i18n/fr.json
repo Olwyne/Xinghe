@@ -179,6 +179,8 @@
     "attachToTask": "Rattacher à une tâche",
     "emptyDay": "Aucune session ce jour-là.",
     "continuesAfter": "Se poursuit le lendemain",
-    "attachFailed": "Rattachement impossible. Réessaie."
+    "attachFailed": "Rattachement impossible. Réessaie.",
+    "planned": "prévu",
+    "actual": "réel"
   }
 }

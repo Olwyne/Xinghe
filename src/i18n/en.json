@@ -179,6 +179,8 @@
     "attachToTask": "Attach to a task",
     "emptyDay": "No session that day.",
     "continuesAfter": "Continues the next day",
-    "attachFailed": "Could not attach. Try again."
+    "attachFailed": "Could not attach. Try again.",
+    "planned": "planned",
+    "actual": "actual"
   }
 }

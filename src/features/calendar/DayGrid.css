@@ -160,6 +160,63 @@
   opacity: 0.5;
 }
 
+/* Deux couloirs disjoints : un bloc planifié ne peut jamais recouvrir une
+   session, donc la cible d'un geste est toujours certaine. */
+.daygrid__lane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+}
+
+.daygrid__lane--planned {
+  left: 0;
+  padding-right: 3px;
+}
+
+.daygrid__lane--actual {
+  left: 50%;
+  padding-left: 3px;
+}
+
+.daygrid__lanelabels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.daygrid__lanelabels span {
+  flex: 1;
+  padding-left: 4px;
+}
+
+/* Contour pointillé, fond transparent : une intention n'est pas un fait. */
+.daygrid__planned {
+  position: absolute;
+  min-height: 14px;
+  padding: 2px 6px;
+  border: 1px dashed;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 0.7rem;
+  text-align: left;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.daygrid__planned--done {
+  opacity: 0.45;
+}
+
 .daygrid__attach {
   display: flex;
   align-items: center;

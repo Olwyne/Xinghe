@@ -24,6 +24,11 @@ export function useDaySessions(uid: string | null, reference: number) {
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
+      // Lecture ponctuelle, pas un abonnement : sous localStorage, la grille
+      // ne voit pas les éditions faites ailleurs (ex. le formulaire de temps
+      // de la tâche) tant que `reference`/`dayStart` ne change pas. Trait de
+      // famille de tous les hooks de session en localStorage (useTaskSessions
+      // a le même effet), laissé tel quel — pas dans le périmètre ici.
       const all = getStore<Session[]>(LS_KEY, [])
       setSessions(
         all.filter(
@@ -71,7 +76,11 @@ export function useDaySessions(uid: string | null, reference: number) {
       // taskId et projectId ensemble : le temps d'une tâche est compté dans
       // le projet de cette tâche, l'invariant posé par le sous-projet B.
       const updates = { taskId: task.id, projectId: task.projectId }
-      if (isFirebaseConfigured && uid && db) {
+      if (isFirebaseConfigured) {
+        // Comme useTaskSessions : ne pas retomber en localStorage si Firebase
+        // est configuré mais que uid/db ne sont pas encore prêts, sous peine
+        // d'écrire dans un magasin que ce déploiement ne lit jamais.
+        if (!uid || !db) throw new Error('auth not ready')
         await updateDoc(doc(db, 'users', uid, 'sessions', sessionId), updates)
       } else {
         const all = getStore<Session[]>(LS_KEY, [])

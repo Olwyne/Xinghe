@@ -1,3 +1,21 @@
+/* Styles de DayScreen : il ne les importait pas lui-même et vivait sur le
+   fait qu'App.tsx importe TasksScreen (donc TasksScreen.css) de façon
+   statique. Ils vivent ici plutôt que dans TasksScreen.css parce que
+   DayScreen importe déjà ce fichier via DayGrid, qu'il rend toujours. */
+.day-screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 16px;
+  gap: 12px;
+}
+
+.day-screen__title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
 .daygrid {
   display: flex;
   flex-direction: column;
@@ -90,6 +108,10 @@
   padding: 2px 6px;
   border: 1px solid;
   border-radius: 4px;
+  /* Pas un token : ce texte sombre est choisi pour rester lisible sur la
+     couleur de projet en fond (des pastels clairs, un ensemble fermé de
+     huit dans src/features/tasks/constants.ts), pas pour suivre le thème
+     clair/sombre de l'appli. */
   color: #0b0d2a;
   font-size: 0.7rem;
   text-align: left;

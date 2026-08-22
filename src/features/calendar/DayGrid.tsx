@@ -22,8 +22,8 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
   const uid = user?.uid ?? null
 
   const [reference, setReference] = useState(() => Date.now())
-  const { sessions, range, loading, attachToTask } = useDaySessions(uid, reference)
-  const { tasks } = useTasks(uid, 'all')
+  const { sessions, range, loading: sessionsLoading, attachToTask } = useDaySessions(uid, reference)
+  const { tasks, loading: tasksLoading } = useTasks(uid, 'all')
   const { projects } = useProjects(uid)
 
   const [attaching, setAttaching] = useState<string | null>(null)
@@ -98,11 +98,16 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
   return (
     <section className="daygrid">
       <div className="daygrid__nav">
+        {/* ± 12h depuis le bord de la fenêtre courante, pas ± 24h depuis
+            `reference` : un pas fixe en millisecondes peut sauter un jour
+            entier autour d'un changement d'heure (cf. useWeekSessions.ts).
+            La moitié de la fenêtre voisine atterrit toujours dedans, quelle
+            que soit sa durée réelle. */}
         <button
           type="button"
           className="daygrid__navbtn"
           aria-label={t('calendar.previousDay')}
-          onClick={() => navigate(reference - 24 * HOUR)}
+          onClick={() => navigate(range.start - 12 * HOUR)}
         >
           ‹
         </button>
@@ -111,7 +116,7 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
           type="button"
           className="daygrid__navbtn"
           aria-label={t('calendar.nextDay')}
-          onClick={() => navigate(reference + 24 * HOUR)}
+          onClick={() => navigate(range.end + 12 * HOUR)}
         >
           ›
         </button>
@@ -144,7 +149,7 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
             <div className="daygrid__now" style={{ top: `${nowTop}%` }} />
           )}
 
-          {loading ? (
+          {sessionsLoading || tasksLoading ? (
             <>
               <div className="daygrid__skeleton" style={{ top: '20%', height: '8%' }} />
               <div className="daygrid__skeleton" style={{ top: '45%', height: '12%' }} />

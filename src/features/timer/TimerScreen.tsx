@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useTasks } from '@/hooks/useTasks'
@@ -15,6 +15,7 @@ import { BreakRitualScreen } from './BreakRitualScreen'
 import { GoalBar } from './GoalBar'
 import { TaskPicker } from './TaskPicker'
 import { pickRitual } from './breakRituals'
+import { timerTaskStore } from '@/lib/timerTaskStore'
 import './TimerScreen.css'
 
 interface TimerScreenProps {
@@ -38,6 +39,14 @@ export function TimerScreen({ isDesktop }: TimerScreenProps) {
   )
 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+
+  // `key={tab}` dans App.tsx remonte l'écran à chaque bascule d'onglet : cet
+  // effet tourne donc au moment où l'utilisateur arrive depuis un bloc.
+  // consume() vide la demande, pour qu'un retour ultérieur ne resélectionne pas.
+  useEffect(() => {
+    const requested = timerTaskStore.consume()
+    if (requested) setSelectedTaskId(requested)
+  }, [])
   const selectedTask = activeTasks.find((t) => t.id === selectedTaskId) ?? null
 
   const onFocusComplete = useCallback(

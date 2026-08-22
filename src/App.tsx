@@ -11,9 +11,8 @@ import { DayScreen } from '@/features/calendar/DayScreen'
 import { GoalsScreen } from '@/features/goals/GoalsScreen'
 import { StatsScreen } from '@/features/stats/StatsScreen'
 import { SettingsScreen } from '@/features/settings/SettingsScreen'
+import { timerTaskStore } from '@/lib/timerTaskStore'
 
-// onStartTimer est câblé à la Task 9 (timerTaskStore) ; d'ici là, les blocs
-// affichent le bouton sans effet plutôt que de ne pas l'afficher du tout.
 function AppShell() {
   const desktop = useIsDesktop()
   const [mobileTab, setMobileTab] = useState<NavTab>('timer')
@@ -21,6 +20,14 @@ function AppShell() {
 
   const accentColor = 'var(--xh-focus)'
   const tab = desktop ? desktopTab : mobileTab
+
+  function startTimerWithTask(taskId: string) {
+    timerTaskStore.request(taskId)
+    // Les deux onglets, parce que la barre mobile et la latérale desktop ont
+    // chacune leur état : on ne sait pas laquelle est à l'écran ici.
+    setMobileTab('timer')
+    setDesktopTab('timer')
+  }
 
   return (
     <Layout
@@ -36,9 +43,9 @@ function AppShell() {
           localStorage on mount anyway. Dropping this key would surface such bugs. */}
       <div key={tab} style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'xh-fade-in 0.22s ease both' }}>
         {tab === 'timer' && <TimerScreen isDesktop={desktop} />}
-        {tab === 'tasks' && <TasksScreen onStartTimer={() => {}} />}
+        {tab === 'tasks' && <TasksScreen onStartTimer={startTimerWithTask} />}
         {tab === 'matrix' && <MatrixScreen />}
-        {tab === 'day' && <DayScreen onStartTimer={() => {}} />}
+        {tab === 'day' && <DayScreen onStartTimer={startTimerWithTask} />}
         {tab === 'goals' && <GoalsScreen />}
         {tab === 'stats' && <StatsScreen />}
         {(tab === 'profile' || tab === 'settings') && <SettingsScreen isDesktop={desktop} />}

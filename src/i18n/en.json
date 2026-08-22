@@ -181,6 +181,15 @@
     "continuesAfter": "Continues the next day",
     "attachFailed": "Could not attach. Try again.",
     "planned": "planned",
-    "actual": "actual"
+    "actual": "actual",
+    "newBlock": "Plan a slot",
+    "editBlock": "Planned slot",
+    "blockStart": "Start",
+    "blockDuration": "Duration (min)",
+    "startTimer": "Start",
+    "deleteBlock": "Delete",
+    "confirmDelete": "Confirm?",
+    "blockFailed": "Could not save.",
+    "close": "Close"
   }
 }

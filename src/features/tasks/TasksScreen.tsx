@@ -14,7 +14,11 @@ import './TasksScreen.css'
 
 type TasksView = 'list' | 'matrix' | 'day'
 
-export function TasksScreen() {
+interface TasksScreenProps {
+  onStartTimer: (taskId: string) => void
+}
+
+export function TasksScreen({ onStartTimer }: TasksScreenProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const uid = user?.uid ?? null
@@ -122,7 +126,7 @@ export function TasksScreen() {
 
       {view === 'day' && (
         <div className="tasks-screen__day">
-          <DayGrid onOpenTask={(task) => setOpenTask(task)} />
+          <DayGrid onOpenTask={(task) => setOpenTask(task)} onStartTimer={onStartTimer} />
         </div>
       )}
 

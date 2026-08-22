@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useTasks } from '@/hooks/useTasks'
 import { useProjects } from '@/hooks/useProjects'
 import { useDaySessions } from '@/hooks/useDaySessions'
 import { useDayBlocks } from '@/hooks/useDayBlocks'
+import { useTimerSettings } from '@/hooks/useTimerSettings'
 import { TaskPicker } from '@/features/timer/TaskPicker'
+import { BlockPanel, type BlockPanelMode } from './BlockPanel'
+import { snapToStep, SNAP_STEP_MS } from './blockDrag'
 import { layoutDaySessions, layoutSpans } from './dayLayout'
 import type { Task } from '@/features/tasks/types'
 import './DayGrid.css'
@@ -15,22 +18,32 @@ const HOUR = 3_600_000
 interface DayGridProps {
   /** Ouvre le modal d'une tâche : toute l'édition d'une session y vit déjà. */
   onOpenTask: (task: Task) => void
+  onStartTimer: (taskId: string) => void
 }
 
-export function DayGrid({ onOpenTask }: DayGridProps) {
+export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const uid = user?.uid ?? null
 
   const [reference, setReference] = useState(() => Date.now())
   const { sessions, range, loading: sessionsLoading, attachToTask } = useDaySessions(uid, reference)
-  const { blocks: plannedBlocks, loading: blocksLoading } = useDayBlocks(uid, reference)
+  const {
+    blocks: plannedBlocks,
+    loading: blocksLoading,
+    addBlock,
+    updateBlock,
+    removeBlock,
+  } = useDayBlocks(uid, reference)
   const { tasks, loading: tasksLoading } = useTasks(uid, 'all')
   const { projects } = useProjects(uid)
+  const { settings } = useTimerSettings()
 
   const [attaching, setAttaching] = useState<string | null>(null)
   const [attachFailed, setAttachFailed] = useState(false)
   const [now, setNow] = useState(() => Date.now())
+  const [panel, setPanel] = useState<BlockPanelMode | null>(null)
+  const plannedLaneRef = useRef<HTMLDivElement | null>(null)
 
   const projectColors = useMemo(
     () => Object.fromEntries(projects.map((p) => [p.id, p.color])),
@@ -77,6 +90,7 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
     // qui n'est plus à l'écran une fois qu'on a changé de jour.
     setAttaching(null)
     setAttachFailed(false)
+    setPanel(null)
     setReference(next)
   }
 
@@ -171,14 +185,30 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
             <p className="daygrid__empty">{t('calendar.emptyDay')}</p>
           ) : (
             <>
-              <div className="daygrid__lane daygrid__lane--planned">
+              <div
+                className="daygrid__lane daygrid__lane--planned"
+                ref={plannedLaneRef}
+                onClick={(e) => {
+                  // Un clic sur un bloc existant ne doit pas aussi créer : les
+                  // blocs arrêtent la propagation eux-mêmes (Task 8).
+                  const lane = plannedLaneRef.current
+                  if (!lane) return
+                  const rect = lane.getBoundingClientRect()
+                  if (rect.height <= 0) return
+                  const fraction = (e.clientY - rect.top) / rect.height
+                  const raw = range.start + fraction * (range.end - range.start)
+                  const startedAt = range.start + snapToStep(raw - range.start, SNAP_STEP_MS)
+                  setPanel({ kind: 'create', startedAt })
+                }}
+              >
                 {plannedPositions.map((positioned) => {
                   const block = positioned.item
                   const task = tasksById.get(block.taskId)
                   const color = projectColors[block.projectId] ?? 'var(--xh-text-faint)'
                   const width = 100 / positioned.columnCount
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={block.id}
                       className={`daygrid__planned ${
                         positioned.clippedEnd ? 'daygrid__block--clipend' : ''
@@ -191,11 +221,15 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
                         borderColor: color,
                         color,
                       }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setPanel({ kind: 'edit', block })
+                      }}
                     >
                       <span className="daygrid__blocktitle">
                         {task ? task.title : t('calendar.noTask')}
                       </span>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -245,6 +279,25 @@ export function DayGrid({ onOpenTask }: DayGridProps) {
           )}
         </div>
       </div>
+
+      {panel && (
+        <BlockPanel
+          // Clé sur l'identité de la cible : cliquer un bloc B alors que le
+          // panneau de A est ouvert saute onClose (stopPropagation), donc sans
+          // cette clé React réutiliserait l'instance et son état interne
+          // (brouillon, erreur, suppression armée) resterait celui de A.
+          key={panel.kind === 'edit' ? `edit-${panel.block.id}` : `create-${panel.startedAt}`}
+          mode={panel}
+          tasks={tasks}
+          projectColors={projectColors}
+          defaultDurationMinutes={settings.focusMinutes}
+          onCreate={addBlock}
+          onUpdate={updateBlock}
+          onRemove={removeBlock}
+          onStartTimer={onStartTimer}
+          onClose={() => setPanel(null)}
+        />
+      )}
 
       {attaching && (
         <div className="daygrid__attach">

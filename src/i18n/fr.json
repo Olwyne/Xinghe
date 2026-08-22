@@ -181,6 +181,15 @@
     "continuesAfter": "Se poursuit le lendemain",
     "attachFailed": "Rattachement impossible. Réessaie.",
     "planned": "prévu",
-    "actual": "réel"
+    "actual": "réel",
+    "newBlock": "Planifier un créneau",
+    "editBlock": "Créneau planifié",
+    "blockStart": "Début",
+    "blockDuration": "Durée (min)",
+    "startTimer": "Démarrer",
+    "deleteBlock": "Supprimer",
+    "confirmDelete": "Confirmer ?",
+    "blockFailed": "Échec de l'enregistrement.",
+    "close": "Fermer"
   }
 }

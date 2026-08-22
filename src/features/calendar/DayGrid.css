@@ -169,14 +169,22 @@
   width: 50%;
 }
 
+/* Les blocs à l'intérieur sont positionnés en absolu avec des % de
+   left/width : leur bloc englobant est la boîte de padding de ce couloir,
+   donc un padding ici ne réduit pas la zone qu'ils occupent (ils peuvent
+   déborder dedans). Pour ouvrir un vrai vide de 3px de part et d'autre de
+   la frontière centrale, on rétrécit chaque couloir via calc() et on
+   décale le second d'autant : les deux couloirs restent égaux en largeur
+   et les % des blocs, calculés par rapport à la largeur de leur propre
+   couloir, restent numériquement corrects. */
 .daygrid__lane--planned {
   left: 0;
-  padding-right: 3px;
+  width: calc(50% - 3px);
 }
 
 .daygrid__lane--actual {
-  left: 50%;
-  padding-left: 3px;
+  left: calc(50% + 3px);
+  width: calc(50% - 3px);
 }
 
 .daygrid__lanelabels {
@@ -197,12 +205,26 @@
   padding-left: 4px;
 }
 
-/* Contour pointillé, fond transparent : une intention n'est pas un fait. */
+/* Contour pointillé, fond transparent : une intention n'est pas un fait.
+   Bordure en propriétés longues (et non le raccourci `border`) : un bloc
+   planifié tronqué porte aussi la classe .daygrid__block--clipend, qui ne
+   fixe que border-bottom-width/style. Le raccourci `border` réécrirait ces
+   quatre côtés à la fois et effacerait ce marqueur de troncature quelle que
+   soit la position de cette règle dans le fichier ; les propriétés longues
+   n'écrivent que ce qu'elles nomment, donc la bordure basse posée par
+   --clipend survit. */
 .daygrid__planned {
   position: absolute;
   min-height: 14px;
   padding: 2px 6px;
-  border: 1px dashed;
+  border-top-width: 1px;
+  border-right-width: 1px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+  border-top-style: dashed;
+  border-right-style: dashed;
+  border-bottom-style: dashed;
+  border-left-style: dashed;
   border-radius: 4px;
   background: transparent;
   font-size: 0.7rem;
@@ -211,6 +233,15 @@
   display: flex;
   align-items: flex-start;
   gap: 4px;
+}
+
+/* Sélecteur composé : sa spécificité (deux classes) dépasse celle de
+   .daygrid__planned et de .daygrid__block--clipend pris isolément, donc ce
+   marqueur l'emporte toujours sur le raccourci ci-dessus, indépendamment de
+   l'ordre des règles dans ce fichier. */
+.daygrid__planned.daygrid__block--clipend {
+  border-bottom-width: 3px;
+  border-bottom-style: double;
 }
 
 .daygrid__planned--done {

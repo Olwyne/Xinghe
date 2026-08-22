@@ -158,6 +158,9 @@
   margin: 0;
   font-size: 0.78rem;
   opacity: 0.5;
+  /* Purement informatif, superposé au couloir planifié : ne doit jamais
+     intercepter le tap qui est censé atteindre le couloir en dessous. */
+  pointer-events: none;
 }
 
 /* Deux couloirs disjoints : un bloc planifié ne peut jamais recouvrir une

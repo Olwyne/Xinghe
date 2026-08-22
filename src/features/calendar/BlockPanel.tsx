@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TaskPicker } from '@/features/timer/TaskPicker'
-import { validateEntry, type TimeEntryDraft } from '@/features/tasks/timeEntry'
+import {
+  validateEntry,
+  type TimeEntryDraft,
+  type TimeEntryError,
+} from '@/features/tasks/timeEntry'
 import { resolveTimeOfDayInRange } from './blockDrag'
 import type { PeriodRange } from '@/lib/time'
 import type { Task } from '@/features/tasks/types'
@@ -11,6 +15,14 @@ import './BlockPanel.css'
 export type BlockPanelMode =
   | { kind: 'create'; startedAt: number }
   | { kind: 'edit'; block: PlannedBlock }
+
+// Copié de TaskTimeEntries.ERROR_KEYS (non exporté) : mêmes clés `tasks.*`,
+// pas de doublon sous `calendar.*` pour un message qui existe déjà.
+const ERROR_KEYS: Record<TimeEntryError, string> = {
+  'duration-too-short': 'tasks.errorDurationTooShort',
+  'starts-in-future': 'tasks.errorStartsInFuture',
+  'invalid-time': 'tasks.errorInvalidTime',
+}
 
 interface BlockPanelProps {
   mode: BlockPanelMode
@@ -32,7 +44,11 @@ function toDraft(startedAt: number, durationMinutes: number): TimeEntryDraft {
   const day = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime()
   return {
     day,
-    startMinutes: Math.round((startedAt - day) / 60_000),
+    // Décomposé depuis les accesseurs locaux du Date, pas depuis un delta
+    // d'epoch millisecondes : ce dernier suppose une journée de 24h pile et
+    // se trompe d'une heure les jours de bascule DST (ex. 29 mars 2026 en
+    // Europe). `day` ne sert plus qu'à la garde NaN de `validateEntry`.
+    startMinutes: start.getHours() * 60 + start.getMinutes(),
     durationMinutes,
   }
 }
@@ -178,6 +194,11 @@ export function BlockPanel({
 
       {outOfRange && <p className="blockpanel__error">{t('calendar.blockOutOfRange')}</p>}
       {failed && <p className="blockpanel__error">{t('calendar.blockFailed')}</p>}
+      {/* outOfRange et failed couvrent déjà les cas les plus précis : ne pas
+          superposer un second message pour le même problème sous-jacent. */}
+      {error && !outOfRange && !failed && (
+        <p className="blockpanel__error">{t(ERROR_KEYS[error])}</p>
+      )}
 
       {mode.kind === 'create' ? (
         <TaskPicker

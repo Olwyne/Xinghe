@@ -339,6 +339,14 @@ Expected: PASS, 22 tests.
 Run: `rtk npm test`
 Expected: 160 tests au vert (138 + 22).
 
+**Amendements post-revue (pré-merge) — trois trous dans la suite de tests :**
+
+1. Le test bornage `[0, 1]` ne vérifiait que `top >= 0` et `height <= 1` sur une session commençant exactement au bord de la fenêtre : `top` y vaut 0 par construction, donc `top >= 0` était une tautologie qu'une implémentation cassée aurait aussi satisfaite. Réécrit avec une session qui démarre après le début réel de la fenêtre et déborde très largement après la fin (`durationMs: 50 * HOUR`), et les quatre bornes (`top >= 0`, `top <= 1`, `height >= 0`, `height <= 1`) sont désormais asserées.
+2. La suite ne couvrait qu'une fenêtre de 23h (`dayStart` un jour de retour à l'heure d'hiver). Ajouté le cas complémentaire, une fenêtre de 25h (passage à l'heure d'été) : une session entièrement à l'intérieur (24h-25h) doit garder `top`/`height` proportionnels à 25h et ne pas être marquée `clippedEnd`. C'est le cas qu'un clamp naïf sur un dénominateur fixe de 24h tronquerait à tort.
+3. Le test « pas de plancher de hauteur » ne portait que sur une session de 30 secondes isolée, sans voisine. Ajouté un test où cette session de 30 secondes est insérée dans un groupe où deux sessions se chevauchent déjà (a: 0h-1h, b: 0h30-2h) — à un instant (1h06) où la colonne de `a` vient de se libérer. L'implémentation correcte réutilise cette colonne (`columnCount` reste 2 pour a, b et la session minuscule, `column` de la minuscule vaut 0) ; un plancher de durée qui gonflerait sa fin manquerait cette réutilisation et pousserait `columnCount` à 3.
+
+Ces trois ajouts portent la suite du module à 25 tests (22 + 3), et 162 au total (160 + 2 nets — un des trois est une réécriture de test existant, pas un ajout).
+
 - [ ] **Step 6: Commit**
 
 ```bash
@@ -470,6 +478,11 @@ Expected: aucune erreur de type, 160 tests au vert.
 ```bash
 rtk git add src/hooks/useDaySessions.ts && rtk git commit -m "feat: add useDaySessions hook"
 ```
+
+**Amendements post-revue (pré-merge) :**
+
+1. `attachToTask` gardait `if (isFirebaseConfigured && uid && db)` et retombait sinon en `localStorage`, y compris quand Firebase est configuré mais que `uid` n'a pas encore résolu — un déploiement Firebase pouvait alors écrire en local, une écriture jamais lue nulle part. `src/hooks/useTaskSessions.ts` avait déjà ce garde correct pour ses propres écritures : la branche est désormais sur `isFirebaseConfigured` seul, avec un `throw new Error('auth not ready')` quand `uid` ou `db` manque, à charge de l'appelant (`DayGrid`, via `handleSelect` → `attachFailed`) de l'afficher comme un échec de rattachement ordinaire.
+2. Sous `localStorage`, `useDaySessions` fait une lecture ponctuelle à chaque changement de `reference`/`dayStart`, pas un abonnement : la grille ne voit pas une édition faite ailleurs (le formulaire de temps de la tâche, par exemple) tant que le jour affiché ne change pas. C'est un trait de famille de tous les hooks de session en `localStorage` du projet (`useTaskSessions` a le même effet) — laissé tel quel, mais désormais documenté par un commentaire dans le hook plutôt que silencieux.
 
 ---
 
@@ -912,6 +925,12 @@ Expected: aucune erreur de type, 160 tests au vert.
 rtk git add src/features/calendar/DayGrid.tsx src/features/calendar/DayGrid.css src/i18n/fr.json src/i18n/en.json && rtk git commit -m "feat: add the day grid component"
 ```
 
+**Amendements post-revue (pré-merge) :**
+
+1. `DayGrid` déstructurait `tasks` de `useTasks(uid, 'all')` sans son `loading`, et le squelette n'était posé que sur `loading` d'`useDaySessions`. Les deux abonnements résolvent indépendamment : dans la fenêtre où les sessions sont arrivées mais où la carte des tâches est encore vide, tous les blocs se peignaient en pointillés « Sans tâche » — y compris ceux déjà rattachés — et un tap dedans ouvrait le panneau de rattachement sur une session qui ne l'était pas, prêt à écraser un `taskId` valide au premier choix. `DayGrid` prend maintenant `loading` des deux hooks (`sessionsLoading`, `tasksLoading`) et n'affiche les blocs que quand les deux sont résolus.
+2. La navigation avançait/reculait de `± 24 * HOUR` depuis `reference`. `src/hooks/useWeekSessions.ts` documente déjà pourquoi c'est fragile : un pas fixe en millisecondes peut, autour d'un changement d'heure, retomber dans le jour d'avant celui visé et rendre un jour inatteignable. La navigation part désormais du bord de la fenêtre affichée, pas de `reference` : jour précédent = `range.start - 12 * HOUR`, jour suivant = `range.end + 12 * HOUR` — la moitié d'une fenêtre voisine atterrit toujours dedans quelle que soit sa durée réelle (23h, 24h ou 25h). `navigate()` reste le seul point qui réinitialise le panneau de rattachement et son erreur ; « aujourd'hui » reste `Date.now()`.
+3. `color: #0b0d2a` sur `.daygrid__block` était la seule couleur brute en dur du fichier, sans explication. Commentée : les couleurs de projet sont un ensemble fermé de huit pastels clairs (`src/features/tasks/constants.ts`), donc ce texte sombre est accordé à cette palette plutôt qu'au thème clair/sombre de l'appli — pas un oubli de token.
+
 ---
 
 ### Task 4: Brancher la grille dans la navigation
@@ -962,6 +981,10 @@ et le rendu de la vue, après le bloc `{view === 'matrix' && …}` :
 ```
 
 `setOpenTask` est l'état que l'écran utilise déjà pour son `TaskModal` : la grille délègue donc l'édition au modal existant sans le dupliquer.
+
+**Amendement post-revue (pré-merge) — critique :** ce branchement rend accessible un défaut de `useTasks.ts` qu'une revue antérieure (sous-projet A, tâche 3) avait qualifié d'« inatteignable par les appelants d'alors » et laissé volontairement en l'état. Il l'est devenu ici : `TasksScreen` tient `useTasks(uid, selectedId)` — une liste de tâches **filtrée par projet** — et c'est son `TaskModal` (via `setOpenTask`, ligne 978) qui reçoit la tâche cliquée dans la grille. Or `DayGrid` lit ses tâches avec `useTasks(uid, 'all')`, donc un clic dans la vue Jour peut ouvrir le modal sur une tâche absente de la liste filtrée de `TasksScreen`, si un autre projet que « tous » est sélectionné dans la barre latérale. `updateTask` (dans `useTasks.ts`) calculait `movesProject` à partir de `tasks.find((t) => t.id === id)` : pour une tâche absente de sa propre liste, `current` valait `undefined`, donc `movesProject` restait `false` même quand `updates.projectId` change réellement — le batch qui réaffecte les sessions de la tâche à son nouveau projet ne partait jamais, et seul le document de la tâche était écrit. Le temps déjà enregistré restait compté dans les objectifs de l'ancien projet, silencieusement et sans retour possible (la comparaison redevient égale après coup).
+
+Corrigé dans `updateTask` lui-même, pas dans les écrans : quand `updates.projectId` est fourni et que la tâche est absente de la liste du hook, son `projectId` réel est résolu avant de conclure — en Firestore par une lecture ponctuelle `getDoc(docRef(uid, id))`, en `localStorage` par une recherche dans la liste complète stockée (`getStore<Task[]>(LS_KEY, [])`), pas dans la liste filtrée `tasks`. L'ordre des écritures ne change pas : les sessions sont toujours réaffectées avant que le document de la tâche soit écrit, pour la même raison de reprise sur échec déjà établie ailleurs (une écriture de sessions qui échoue laisse `movesProject` vrai au prochain essai). `reassignSessions` (`src/features/tasks/timeEntry.ts`) reste la seule implémentation de la réaffectation, et la signature de `updateTask` ne change pas.
 
 - [ ] **Step 2: Ajouter le style du conteneur**
 
@@ -1093,6 +1116,8 @@ Expected: aucune erreur de type, 160 tests au vert. `noUnusedLocals` signalera t
 rtk git add src/features/tasks/TasksScreen.tsx src/features/tasks/TasksScreen.css src/features/calendar/DayScreen.tsx src/components/Sidebar.tsx src/App.tsx && rtk git commit -m "feat: reach the day grid from the tasks screen and the sidebar"
 ```
 
+**Amendement post-revue (pré-merge) :** `.day-screen` et `.day-screen__title` ci-dessus avaient été ajoutées à `src/features/tasks/TasksScreen.css`, comme écrit dans ce plan — mais `DayScreen.tsx` n'importe pas ce fichier. Il ne s'affichait correctement que parce qu'`App.tsx` importe `TasksScreen` de façon statique, donc le CSS finissait de toute façon dans le bundle d'entrée ; le jour où l'un des deux écrans passe en import différé, ces deux règles disparaissent du bundle qui charge `DayScreen`. Déplacées dans `src/features/calendar/DayGrid.css`, que `DayScreen` importe déjà indirectement (il rend toujours `DayGrid`), plutôt que de faire importer un fichier à `DayScreen` lui-même.
+
 ---
 
 ### Task 5: Vérification finale
@@ -1102,7 +1127,7 @@ rtk git add src/features/tasks/TasksScreen.tsx src/features/tasks/TasksScreen.cs
 - [ ] **Step 1: Suite complète**
 
 Run: `rtk npm test`
-Expected: 160 tests au vert, sortie sans avertissement.
+Expected (post-revue) : 162 tests au vert (160 + 2 nets ajoutés en revue pré-merge — voir l'amendement de la tâche 1 : trois assertions ajoutées/réécrites dans `dayLayout.test.ts`, dont une réécriture d'un test existant).
 
 - [ ] **Step 2: Build de production**
 

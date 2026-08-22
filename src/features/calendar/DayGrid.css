@@ -236,6 +236,11 @@
   /* Le glisser vertical doit rester à l'app : sans cela, le navigateur
      interprète le geste comme un défilement et le bloc ne suit pas. */
   touch-action: none;
+  /* Sans ça, un appui prolongé pendant le tiré déclenche la sélection de
+     texte / le menu contextuel d'iOS, qui coupe le geste par un
+     pointercancel silencieux. */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Sélecteur composé : sa spécificité (deux classes) dépasse celle de

@@ -60,6 +60,7 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
   /** Bloc en cours de glisser : `start` est la position fantôme, jamais écrite. */
   const [dragging, setDragging] = useState<{
     id: string
+    pointerId: number
     originalStart: number
     pointerY: number
     start: number
@@ -111,7 +112,13 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
   useEffect(() => {
     if (!dragging) return
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setDragging(null)
+      // Le clic de compatibilité qui suit un geste tactile arrive quand même :
+      // le supprimer comme après un glisser abouti, sinon il rouvre le panneau
+      // que l'utilisateur voulait justement annuler.
+      if (e.key === 'Escape') {
+        draggedRef.current = true
+        setDragging(null)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -136,10 +143,21 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
   }
 
   function handleBlockPointerDown(e: React.PointerEvent, block: PlannedBlock) {
+    // Repartir propre à chaque nouveau geste : un clic de compatibilité resté
+    // en attente d'un geste précédent ne doit pas déteindre sur celui-ci, ni
+    // un message d'échec d'un glisser antérieur rester affiché pendant qu'on
+    // recommence (Important 1, Important 3).
+    draggedRef.current = false
+    setBlockFailed(false)
+    // Un deuxième doigt qui se pose pendant qu'un glisser est déjà en cours,
+    // ou un bouton non-primaire, ne doit jamais démarrer/écraser le geste en
+    // cours : un seul pointeur pilote un glisser à la fois (Important 2).
+    if (dragging !== null || !e.isPrimary) return
     e.stopPropagation()
     e.currentTarget.setPointerCapture(e.pointerId)
     setDragging({
       id: block.id,
+      pointerId: e.pointerId,
       originalStart: block.startedAt,
       pointerY: e.clientY,
       start: block.startedAt,
@@ -148,8 +166,12 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
   }
 
   function handleBlockPointerMove(e: React.PointerEvent) {
+    // Lue une fois ici, hors du updater : setDragging peut être rejoué
+    // (StrictMode) et l'updater doit rester pur, sans lecture du DOM dedans
+    // (Minor 7).
+    const pxPerMs = lanePxPerMs()
     setDragging((prev) => {
-      if (!prev) return prev
+      if (!prev || e.pointerId !== prev.pointerId) return prev
       const deltaPx = e.clientY - prev.pointerY
       // Sous le seuil, le geste reste un appui : c'est ce qui laisse le tap
       // ouvrir le panneau.
@@ -157,7 +179,7 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
       const start = dragToStart({
         originalStart: prev.originalStart,
         deltaPx,
-        pxPerMs: lanePxPerMs(),
+        pxPerMs,
         range,
         stepMs: SNAP_STEP_MS,
       })
@@ -166,15 +188,19 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
   }
 
   async function handleBlockPointerUp(e: React.PointerEvent, block: PlannedBlock) {
-    e.stopPropagation()
     const current = dragging
+    // Un pointeur qui n'est pas celui du glisser en cours (ex. le deuxième
+    // doigt) ne doit ni le clore ni écrire quoi que ce soit (Important 2).
+    if (!current || e.pointerId !== current.pointerId) return
+    e.stopPropagation()
     setDragging(null)
     // Pas de glisser, ou retour au point de départ : c'est un appui, le clic
     // suivant ouvrira le panneau.
-    if (!current || !current.moved || current.start === current.originalStart) return
+    if (!current.moved || current.start === current.originalStart) return
     draggedRef.current = true
     try {
       await moveBlock(block.id, current.start)
+      setBlockFailed(false)
     } catch {
       setBlockFailed(true)
     }
@@ -287,7 +313,15 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
                 ref={plannedLaneRef}
                 onClick={(e) => {
                   // Un clic sur un bloc existant ne doit pas aussi créer : les
-                  // blocs arrêtent la propagation eux-mêmes (Task 8).
+                  // blocs arrêtent la propagation eux-mêmes (Task 8). Mais si
+                  // le bloc a disparu entre le pointerup et ce clic de
+                  // compatibilité (ex. suppression distante), le clic retombe
+                  // sur le couloir lui-même : le drapeau de suppression le
+                  // rattrape aussi ici (Minor 4).
+                  if (draggedRef.current) {
+                    draggedRef.current = false
+                    return
+                  }
                   const lane = plannedLaneRef.current
                   if (!lane) return
                   const rect = lane.getBoundingClientRect()
@@ -314,12 +348,20 @@ export function DayGrid({ onOpenTask, onStartTimer }: DayGridProps) {
                     ghost === null
                       ? positioned.top
                       : (ghost - range.start) / (range.end - range.start)
+                  // Le fantôme garde la hauteur et les colonnes d'avant le
+                  // glisser (Minor 6, refaire tout l'algorithme de colonnes
+                  // pour une position provisoire serait disproportionné) mais
+                  // le marqueur de troncature, lui, doit suivre la position
+                  // affichée : sinon un bloc tiré vers le bas de la fenêtre
+                  // perd son repère de dépassement.
+                  const clippedEnd =
+                    ghost === null ? positioned.clippedEnd : ghost + block.durationMs > range.end
                   return (
                     <button
                       type="button"
                       key={block.id}
                       className={`daygrid__planned ${
-                        positioned.clippedEnd ? 'daygrid__block--clipend' : ''
+                        clippedEnd ? 'daygrid__block--clipend' : ''
                       } ${task?.completed ? 'daygrid__planned--done' : ''} ${
                         ghost !== null ? 'daygrid__planned--dragging' : ''
                       }`}
